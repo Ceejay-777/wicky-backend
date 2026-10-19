@@ -99,6 +99,13 @@ class TestLevelCheckProgress:
         usp.refresh_from_db()
         assert usp.level_unlocked == 2
 
+    def test_advanced_passed_counts_toward_level(self, user, subject):
+        topics = self._level_topics(subject, 1, 5)
+        for t in topics[:4]:
+            TopicProgress.objects.create(user=user, topic=t, status=TopicProgress.Status.ADVANCED_PASSED)
+        UserSubjectProgress.objects.create(user=user, subject=subject)
+        assert check_level_progress(user, subject).action == "level_up"
+
     def test_level_up_2_to_3(self, user, subject):
         self._level_topics(subject, 1, 3)
         self._level_topics(subject, 2, 5)

@@ -118,6 +118,10 @@ class SubmitQuizResponseSerializer(serializers.Serializer):
     total_points = serializers.IntegerField(help_text="Maximum possible points.")
     attempt_number = serializers.IntegerField(help_text="Attempt number.")
     quiz_type = serializers.CharField(help_text="Type of quiz.")
+    level_check = LevelCheckResponseSerializer(
+        allow_null=True,
+        help_text="Level progression after a passed normal quiz (same shape as POST /subjects/<id>/progress/check), else null. A level-up happens here, so a later /progress/check reports 'none'.",
+    )
 
 
 class CreateSubjectSerializer(serializers.Serializer):
@@ -137,14 +141,20 @@ class CurrentTopicSerializer(serializers.Serializer):
     title = serializers.CharField(help_text="Topic title.")
 
 
+class NextTopicSerializer(CurrentTopicSerializer):
+    is_unlocked = serializers.BooleanField(help_text="Whether the topic's level is unlocked for this learner.")
+
+
 class TopicProgressSerializer(serializers.Serializer):
     status = serializers.CharField(help_text="NOT_STARTED, PASSED or ADVANCED_PASSED (READING and QUIZ_READY are never set).")
     is_passed = serializers.BooleanField(help_text="Normal quiz passed (also true after the advanced pass).")
     advanced_passed = serializers.BooleanField(help_text="Advanced quiz passed.")
     completed_at = serializers.DateTimeField(allow_null=True, help_text="When the normal quiz was passed, or null.")
     resource_links_viewed_at = serializers.DateTimeField(allow_null=True, help_text="When the learner opened a resource link, or null.")
-    advanced_quiz_available = serializers.BooleanField(help_text="Whether the advanced quiz can be started now (ignores the retake cooldown).")
-    next_topic = CurrentTopicSerializer(allow_null=True, help_text="The next topic in the roadmap, or null at the end.")
+    advanced_quiz_available = serializers.BooleanField(help_text="Whether the advanced quiz can be started now (eligibility only; see the *_available_at fields for the retake cooldown).")
+    normal_quiz_available_at = serializers.DateTimeField(allow_null=True, help_text="When the normal quiz can next be taken (1-hour retake cooldown), or null if now.")
+    advanced_quiz_available_at = serializers.DateTimeField(allow_null=True, help_text="Same for the advanced quiz; its cooldown is separate.")
+    next_topic = NextTopicSerializer(allow_null=True, help_text="The next topic in the roadmap, or null at the end.")
 
 
 class TopicDetailSerializer(serializers.Serializer):

@@ -4,7 +4,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Subject, Topic, TopicProgress, UserSubjectProgress
+from .models import QuizAttempt, Subject, Topic, TopicProgress, UserSubjectProgress
 from apps.ai.exceptions import ProviderError
 from .serializers import (
     CreateSubjectSerializer,
@@ -56,6 +56,20 @@ from .services import (
 )
 
 
+def _level_check(user, subject) -> dict:
+    result = check_level_progress(user, subject)
+    resp = {"action": result.action}
+    if result.action == "level_up":
+        resp["new_level_unlocked"] = result.new_level_unlocked
+        resp["slots_available"] = result.slots_available
+        resp["suggestions"] = result.suggestions
+    elif result.action == "subject_completed":
+        usp = UserSubjectProgress.objects.get(user=user, subject=subject)
+        resp["needs_subject_selection"] = usp.needs_subject_selection
+        resp["suggestions"] = result.suggestions
+    return resp
+
+
 class CheckLevelProgressView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -67,17 +81,7 @@ class CheckLevelProgressView(GenericAPIView):
     )
     def post(self, request, subject_id):
         subject = Subject.objects.get(id=subject_id)
-        result = check_level_progress(request.user, subject)
-        resp = {"action": result.action}
-        if result.action == "level_up":
-            resp["new_level_unlocked"] = result.new_level_unlocked
-            resp["slots_available"] = result.slots_available
-            resp["suggestions"] = result.suggestions
-        elif result.action == "subject_completed":
-            usp = UserSubjectProgress.objects.get(user=request.user, subject=subject)
-            resp["needs_subject_selection"] = usp.needs_subject_selection
-            resp["suggestions"] = result.suggestions
-        return Response({"data": resp, "status": "success"})
+        return Response({"data": _level_check(request.user, subject), "status": "success"})
 
 
 class ExploreSubjectsView(GenericAPIView):
@@ -333,6 +337,8 @@ class SubmitQuizView(GenericAPIView):
             attempt = submit_quiz(attempt_id, answers)
         except ValueError as e:
             return Response({"detail": str(e), "status": "error"}, status=status.HTTP_400_BAD_REQUEST)
+        # Unlock the next level now, so a later /progress/check would report "none".
+        passed_normal = attempt.passed and attempt.quiz_type == QuizAttempt.QuizType.NORMAL
         return Response({
             "data": {
                 "id": attempt.id,
@@ -341,6 +347,7 @@ class SubmitQuizView(GenericAPIView):
                 "total_points": attempt.total_points,
                 "attempt_number": attempt.attempt_number,
                 "quiz_type": attempt.quiz_type,
+                "level_check": _level_check(request.user, topic.subject) if passed_normal else None,
             },
             "status": "success",
         })

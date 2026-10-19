@@ -277,6 +277,41 @@ class TestSubmitQuizView:
         assert data["passed"] is True
         assert data["score"] == 80
         assert data["total_points"] == 100
+        assert data["level_check"]["action"] == "none"
+
+    @patch("apps.learning.views.submit_quiz")
+    def test_passing_normal_quiz_unlocks_next_level(self, mock_submit, auth_client, user, subject, enrolled):
+        topics = list(Topic.objects.filter(subject=subject).order_by("order"))
+        for t in topics[:4]:
+            TopicProgress.objects.create(user=user, topic=t, status=TopicProgress.Status.PASSED)
+        attempt = QuizAttempt.objects.create(
+            user=user, topic=topics[0], quiz_type="NORMAL", attempt_number=1,
+            questions=[], total_points=100, score=80, passed=True,
+        )
+        mock_submit.return_value = attempt
+        resp = auth_client.post(
+            f"/api/learning/topics/{topics[0].id}/quiz/submit",
+            {"attempt_id": attempt.id, "answers": [0]},
+            format="json",
+        )
+        assert resp.json()["data"]["level_check"]["action"] == "level_up"
+        enrolled.refresh_from_db()
+        assert enrolled.level_unlocked == 2
+
+    @patch("apps.learning.views.submit_quiz")
+    def test_failed_quiz_skips_level_check(self, mock_submit, auth_client, user, subject, enrolled):
+        topic = Topic.objects.filter(subject=subject).first()
+        attempt = QuizAttempt.objects.create(
+            user=user, topic=topic, quiz_type="NORMAL", attempt_number=1,
+            questions=[], total_points=100, score=0, passed=False,
+        )
+        mock_submit.return_value = attempt
+        resp = auth_client.post(
+            f"/api/learning/topics/{topic.id}/quiz/submit",
+            {"attempt_id": attempt.id, "answers": [0]},
+            format="json",
+        )
+        assert resp.json()["data"]["level_check"] is None
 
     @patch("apps.learning.views.submit_quiz")
     def test_submit_handles_already_submitted(self, mock_submit, auth_client, user, subject, enrolled):
@@ -342,8 +377,30 @@ class TestTopicAccess:
             "status": "NOT_STARTED", "is_passed": False, "advanced_passed": False,
             "completed_at": None, "resource_links_viewed_at": None,
             "advanced_quiz_available": False,
-            "next_topic": {"id": topics[1].id, "title": topics[1].title},
+            "normal_quiz_available_at": None, "advanced_quiz_available_at": None,
+            "next_topic": {"id": topics[1].id, "title": topics[1].title, "is_unlocked": True},
         }
+
+    def test_next_topic_is_unlocked_follows_level(self, auth_client, subject, enrolled):
+        topics = list(Topic.objects.filter(subject=subject).order_by("order"))
+        Topic.objects.filter(id=topics[1].id).update(level=2)
+        url = f"/api/learning/topics/{topics[0].id}"
+        assert auth_client.get(url).json()["data"]["progress"]["next_topic"]["is_unlocked"] is False
+        UserSubjectProgress.objects.filter(id=enrolled.id).update(level_unlocked=2)
+        assert auth_client.get(url).json()["data"]["progress"]["next_topic"]["is_unlocked"] is True
+
+    def test_quiz_available_at_per_type(self, auth_client, user, subject, enrolled):
+        topic = self._topic(subject)
+        attempt = QuizAttempt.objects.create(
+            user=user, topic=topic, quiz_type="NORMAL", attempt_number=1,
+            questions=[], total_points=100,
+        )
+        p = auth_client.get(f"/api/learning/topics/{topic.id}").json()["data"]["progress"]
+        assert p["normal_quiz_available_at"] is not None
+        assert p["advanced_quiz_available_at"] is None
+        QuizAttempt.objects.filter(id=attempt.id).update(created_at="2020-01-01T00:00:00Z")
+        p = auth_client.get(f"/api/learning/topics/{topic.id}").json()["data"]["progress"]
+        assert p["normal_quiz_available_at"] is None
 
     def test_progress_after_advanced_pass(self, auth_client, user, subject, enrolled):
         topics = list(Topic.objects.filter(subject=subject).order_by("order"))

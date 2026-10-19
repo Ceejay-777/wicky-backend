@@ -85,7 +85,7 @@ class SubjectPreviewResult:
 def _compute_and_store_embedding(subject: Subject, text: str) -> None:
     if connection.vendor != "postgresql":
         return
-        
+
     embedding = generate_embedding(text)
     Subject.objects.filter(id=subject.id).update(embedding=embedding)
 
@@ -155,13 +155,13 @@ def resolve_or_create_subject(raw_input: str) -> ResolveResult | NarrowResult:
 
     if not candidates:
         llm_result = standardize_subject_name(raw_input)
-        
+
         if not llm_result.get("is_specific", True):
             return NarrowResult(
                 action="narrow",
                 suggestion=llm_result.get("suggestion", "Please be more specific."),
             )
-            
+
         standardized_name = llm_result["standardized_name"]
         subject = _get_or_create_subject(standardized_name)
         return ResolveResult(action="resolve", subject=subject)
@@ -615,9 +615,9 @@ def get_subject_detail(user, subject_id: int) -> SubjectDetailResult:
     completed_subq = TopicProgress.objects.filter(
         user=user, topic=OuterRef("pk")
     ).values("completed_at")[:1]
-    viewed_subq = TopicProgress.objects.filter(
-        user=user, topic=OuterRef("pk")
-    ).values("resource_links_viewed_at")[:1]
+    viewed_subq = TopicProgress.objects.filter(user=user, topic=OuterRef("pk")).values(
+        "resource_links_viewed_at"
+    )[:1]
     topics = (
         Topic.objects.filter(subject=usp.subject)
         .annotate(
@@ -688,7 +688,8 @@ def get_subject_detail(user, subject_id: int) -> SubjectDetailResult:
         roadmap_status=usp.subject.roadmap_status,
         percent_complete=(
             sum(t["is_passed"] for t in topics_data) * 100 // len(topics_data)
-            if topics_data else 0
+            if topics_data
+            else 0
         ),
         levels=levels,
         topics=topics_data,
@@ -772,7 +773,7 @@ def check_level_progress(user, subject) -> LevelCheckResult:
         user=user,
         topic__subject=subject,
         topic__level=current_level,
-        status=TopicProgress.Status.PASSED,
+        status__in=(TopicProgress.Status.PASSED, TopicProgress.Status.ADVANCED_PASSED),
     ).count()
     threshold = compute_level_threshold(total)
 
@@ -1360,9 +1361,14 @@ def get_topic_progress(user, topic: Topic) -> dict:
     next_topic = (
         Topic.objects.filter(subject_id=topic.subject_id, order__gt=topic.order)
         .order_by("order")
-        .values("id", "title")
+        .values("id", "title", "level")
         .first()
     )
+    if next_topic is not None:
+        level_unlocked = UserSubjectProgress.objects.values_list(
+            "level_unlocked", flat=True
+        ).get(user=user, subject_id=topic.subject_id)
+        next_topic["is_unlocked"] = next_topic.pop("level") <= level_unlocked
     return {
         "status": status,
         "is_passed": status
@@ -1371,6 +1377,12 @@ def get_topic_progress(user, topic: Topic) -> dict:
         "completed_at": tp.completed_at if tp else None,
         "resource_links_viewed_at": tp.resource_links_viewed_at if tp else None,
         "advanced_quiz_available": can_take_advanced_quiz(user, topic),
+        "normal_quiz_available_at": _quiz_available_at(
+            user, topic, QuizAttempt.QuizType.NORMAL
+        ),
+        "advanced_quiz_available_at": _quiz_available_at(
+            user, topic, QuizAttempt.QuizType.ADVANCED
+        ),
         "next_topic": next_topic,
     }
 
@@ -1402,6 +1414,20 @@ def can_take_advanced_quiz(user, topic) -> bool:
     return True
 
 
+def _quiz_available_at(user, topic, quiz_type: str):
+    """When this quiz type can next be generated, or None if it can be now."""
+    last = (
+        QuizAttempt.objects.filter(user=user, topic=topic, quiz_type=quiz_type)
+        .order_by("-created_at")
+        .values_list("created_at", flat=True)
+        .first()
+    )
+    if last is None:
+        return None
+    end = last + timedelta(hours=RETRY_COOLDOWN_HOURS)
+    return end if end > timezone.now() else None
+
+
 def generate_quiz(
     user,
     topic,
@@ -1420,23 +1446,10 @@ def generate_quiz(
         if tp.status == TopicProgress.Status.PASSED:
             raise ValueError("Normal quiz already passed for this topic")
 
-    last_attempt_time = (
-        QuizAttempt.objects.filter(
-            user=user,
-            topic=topic,
-            quiz_type=quiz_type,
-        )
-        .order_by("-created_at")
-        .values_list("created_at", flat=True)
-        .first()
-    )
-    if last_attempt_time is not None:
-        cooldown_end = last_attempt_time + timedelta(hours=RETRY_COOLDOWN_HOURS)
-        if timezone.now() < cooldown_end:
-            remaining = (cooldown_end - timezone.now()).seconds // 60
-            raise ValueError(
-                f"Please wait {remaining} minutes before retaking this quiz"
-            )
+    available_at = _quiz_available_at(user, topic, quiz_type)
+    if available_at is not None:
+        remaining = math.ceil((available_at - timezone.now()).total_seconds() / 60)
+        raise ValueError(f"Please wait {remaining} minutes before retaking this quiz")
 
     schema = (
         NORMAL_QUIZ_SCHEMA

@@ -166,7 +166,7 @@ class TestGenerateQuiz:
     def test_retake_cooldown(self, mock_gen, user, topic):
         mock_gen.return_value = _make_quiz_data(5, 100)
         generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
-        with pytest.raises(ValueError, match="Please wait"):
+        with pytest.raises(ValueError, match="Please wait 60 minutes"):
             generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
 
     @patch("apps.learning.services.generate_content")
