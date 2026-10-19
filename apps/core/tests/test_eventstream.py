@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
@@ -73,17 +71,17 @@ class TestCookieJWTUserMiddleware:
         request.user = AnonymousUser()
         if cookie is not None:
             request.COOKIES["access_token"] = cookie
-        CookieJWTUserMiddleware(get_response)(request)
-        return seen["user"]
+        response = CookieJWTUserMiddleware(get_response)(request)
+        return response if "user" not in seen else seen["user"]
 
     def test_valid_cookie_sets_user_on_event_path(self, user):
         assert self._run("/api/events", _token(user)) == user
 
-    def test_invalid_cookie_leaves_user_anonymous(self):
-        assert not self._run("/api/events", "garbage.token.value").is_authenticated
+    def test_invalid_cookie_is_401_on_event_path(self):
+        assert self._run("/api/events", "garbage.token.value").status_code == 401
 
-    def test_no_cookie_leaves_user_anonymous(self):
-        assert not self._run("/api/events").is_authenticated
+    def test_no_cookie_is_401_on_event_path(self):
+        assert self._run("/api/events").status_code == 401
 
     def test_other_paths_are_not_touched(self, user):
         assert not self._run("/api/learning/subjects", _token(user)).is_authenticated
@@ -93,29 +91,16 @@ class TestCookieJWTUserMiddleware:
 class TestEventStreamEndpoint:
     """Hits the real endpoint; the stream body is never iterated (it is infinite)."""
 
-    @staticmethod
-    def _body(response):
-        # A rejected stream emits one "forbidden" error event and then ends, so
-        # it is safe to read to completion (an accepted stream never ends).
-        assert response.is_async
+    def test_anonymous_is_401_not_a_stream(self):
+        response = Client().get("/api/events")
+        assert response.status_code == 401
+        assert not response["Content-Type"].startswith("text/event-stream")
+        assert response.json()["status"] == "error"
 
-        async def collect():
-            return b"".join([chunk async for chunk in response.streaming_content])
-
-        return asyncio.run(collect())
-
-    def test_anonymous_is_rejected_as_forbidden(self):
-        body = self._body(Client().get("/api/events"))
-        assert b"stream-error" in body
-        assert b"forbidden" in body
-        assert b"stream-open" not in body
-
-    def test_garbage_token_is_rejected_as_forbidden(self):
+    def test_garbage_token_is_401_not_a_stream(self):
         client = Client()
         client.cookies["access_token"] = "garbage.token.value"
-        body = self._body(client.get("/api/events"))
-        assert b"forbidden" in body
-        assert b"stream-open" not in body
+        assert client.get("/api/events").status_code == 401
 
     def test_authenticated_user_gets_an_event_stream(self, user):
         client = Client()

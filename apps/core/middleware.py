@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
@@ -27,6 +28,10 @@ class CookieJWTUserMiddleware:
                 result = self.authenticator.authenticate(request)
             except (InvalidToken, TokenError, AuthenticationFailed):
                 result = None
-            if result is not None:
-                request.user = result[0]
+            if result is None:
+                # A 200 stream that closes makes EventSource reconnect forever; a real 401 stops it.
+                return JsonResponse(
+                    {"detail": "Authentication required.", "status": "error"}, status=401
+                )
+            request.user = result[0]
         return self.get_response(request)
