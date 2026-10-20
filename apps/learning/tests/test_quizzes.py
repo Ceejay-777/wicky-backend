@@ -9,6 +9,7 @@ from apps.learning.models import (
 from apps.learning.services import (
     generate_quiz, submit_quiz, mark_resource_links_viewed,
     can_take_advanced_quiz, _next_attempt_number, _validate_quiz_response,
+    _quiz_available_at, get_topic_progress,
 )
 from apps.learning.exceptions import GenerationError
 
@@ -165,14 +166,22 @@ class TestGenerateQuiz:
     @patch("apps.learning.services.generate_content")
     def test_retake_cooldown(self, mock_gen, user, topic):
         mock_gen.return_value = _make_quiz_data(5, 100)
-        generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
+        a1 = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
+        submit_quiz(a1.id, [1] * 5)
         with pytest.raises(ValueError, match="Please wait 60 minutes"):
             generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
 
     @patch("apps.learning.services.generate_content")
-    def test_retake_cooldown_expires(self, mock_gen, user, topic):
+    def test_unsubmitted_attempt_does_not_start_cooldown(self, mock_gen, user, topic):
         mock_gen.return_value = _make_quiz_data(5, 100)
         generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
+        assert _quiz_available_at(user, topic, QuizAttempt.QuizType.NORMAL) is None
+
+    @patch("apps.learning.services.generate_content")
+    def test_retake_cooldown_expires(self, mock_gen, user, topic):
+        mock_gen.return_value = _make_quiz_data(5, 100)
+        a1 = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
+        submit_quiz(a1.id, [1] * 5)
         QuizAttempt.objects.filter(user=user, topic=topic).update(
             created_at=timezone.now() - timedelta(hours=2),
         )
@@ -297,6 +306,25 @@ class TestSubmitQuiz:
         attempt = self._create_attempt(user, topic, "ADVANCED", 200)
         submit_quiz(attempt.id, self.VALID_ANSWERS)
         assert not can_take_advanced_quiz(user, topic)
+
+
+@pytest.mark.django_db
+class TestSubmitTimestamps:
+
+    @patch("apps.learning.services.generate_content")
+    def test_submit_sets_submitted_at_and_advanced_completed_at(self, mock_gen, user, topic):
+        UserSubjectProgress.objects.create(user=user, subject=topic.subject)
+        TopicProgress.objects.create(
+            user=user, topic=topic, status=TopicProgress.Status.PASSED,
+            resource_links_viewed_at=timezone.now(),
+        )
+        mock_gen.return_value = _make_quiz_data(10, 200)
+        a = generate_quiz(user, topic, QuizAttempt.QuizType.ADVANCED)
+        assert a.submitted_at is None
+        a = submit_quiz(a.id, [0] * 10)
+        assert a.submitted_at is not None
+        progress = get_topic_progress(user, topic)
+        assert progress["advanced_completed_at"] is not None
 
 
 @pytest.mark.django_db

@@ -95,12 +95,35 @@ class GenerateQuizRequestSerializer(serializers.Serializer):
     )
 
 
-class GenerateQuizResponseSerializer(serializers.Serializer):
+class QuizQuestionSerializer(serializers.Serializer):
+    question = serializers.CharField()
+    options = serializers.ListField(child=serializers.CharField(), help_text="Four options, in display order.")
+
+
+class QuizQuestionResultSerializer(serializers.Serializer):
+    selected_index = serializers.IntegerField()
+    correct_index = serializers.IntegerField()
+    is_correct = serializers.BooleanField()
+    explanation = serializers.CharField()
+
+
+class QuizAttemptResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Quiz attempt ID.")
-    quiz_type = serializers.CharField(help_text="Type of quiz generated.")
+    quiz_type = serializers.CharField(help_text="NORMAL or ADVANCED.")
     attempt_number = serializers.IntegerField(help_text="Attempt number for this quiz type and topic.")
-    questions = serializers.JSONField(help_text="List of quiz questions with options and explanations.")
+    questions = QuizQuestionSerializer(many=True, help_text="Questions without answers or explanations; those come back in `results` once submitted.")
     total_points = serializers.IntegerField(help_text="Maximum possible points.")
+    answers = serializers.ListField(child=serializers.IntegerField(), allow_null=True, help_text="Selected option indices, or null until submitted.")
+    score = serializers.IntegerField(help_text="Points earned (0 until submitted).")
+    passed = serializers.BooleanField(help_text="Whether the user passed (score >= 60% of total_points).")
+    submitted_at = serializers.DateTimeField(allow_null=True, help_text="When the attempt was submitted, or null. Null on attempts submitted before this field existed.")
+    results = QuizQuestionResultSerializer(many=True, allow_null=True, help_text="Per-question outcome, or null until submitted.")
+    correct_count = serializers.IntegerField(allow_null=True, help_text="Questions answered correctly, or null until submitted.")
+    question_count = serializers.IntegerField(help_text="Number of questions (4-6 normal, 9-12 advanced; not fixed).")
+
+
+class GenerateQuizResponseSerializer(QuizAttemptResponseSerializer):
+    resumed = serializers.BooleanField(help_text="True when an unsubmitted attempt was returned instead of generating a new quiz.")
 
 
 class SubmitQuizRequestSerializer(serializers.Serializer):
@@ -111,13 +134,7 @@ class SubmitQuizRequestSerializer(serializers.Serializer):
     )
 
 
-class SubmitQuizResponseSerializer(serializers.Serializer):
-    id = serializers.IntegerField(help_text="Quiz attempt ID.")
-    passed = serializers.BooleanField(help_text="Whether the user passed (score >= 60% of total_points).")
-    score = serializers.IntegerField(help_text="Points earned.")
-    total_points = serializers.IntegerField(help_text="Maximum possible points.")
-    attempt_number = serializers.IntegerField(help_text="Attempt number.")
-    quiz_type = serializers.CharField(help_text="Type of quiz.")
+class SubmitQuizResponseSerializer(QuizAttemptResponseSerializer):
     level_check = LevelCheckResponseSerializer(
         allow_null=True,
         help_text="Level progression after a passed normal quiz (same shape as POST /subjects/<id>/progress/check), else null. A level-up happens here, so a later /progress/check reports 'none'.",
@@ -150,6 +167,7 @@ class TopicProgressSerializer(serializers.Serializer):
     is_passed = serializers.BooleanField(help_text="Normal quiz passed (also true after the advanced pass).")
     advanced_passed = serializers.BooleanField(help_text="Advanced quiz passed.")
     completed_at = serializers.DateTimeField(allow_null=True, help_text="When the normal quiz was passed, or null.")
+    advanced_completed_at = serializers.DateTimeField(allow_null=True, help_text="When the advanced quiz was passed, or null (also null for advanced passes before this field existed).")
     resource_links_viewed_at = serializers.DateTimeField(allow_null=True, help_text="When the learner opened a resource link, or null.")
     advanced_quiz_available = serializers.BooleanField(help_text="Whether the advanced quiz can be started now (eligibility only; see the *_available_at fields for the retake cooldown).")
     normal_quiz_available_at = serializers.DateTimeField(allow_null=True, help_text="When the normal quiz can next be taken (1-hour retake cooldown), or null if now.")
@@ -171,6 +189,12 @@ class TopicDetailSerializer(serializers.Serializer):
     progress = TopicProgressSerializer(help_text="The current user's progress on this topic.")
 
 
+class EnrolledCurrentTopicSerializer(CurrentTopicSerializer):
+    level = serializers.IntegerField(help_text="Difficulty level (1-3).")
+    order = serializers.IntegerField(help_text="Order within the subject's roadmap.")
+    normal_quiz_available_at = serializers.DateTimeField(allow_null=True, help_text="When the normal quiz can next be taken (1-hour retake cooldown), or null if now.")
+
+
 class EnrolledSubjectListSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Subject ID.")
     name = serializers.CharField(help_text="Subject name.")
@@ -185,7 +209,7 @@ class EnrolledSubjectListSerializer(serializers.Serializer):
     notification_frequency_hours = serializers.IntegerField(help_text="Notification interval in hours (1-24).")
     next_due_at = serializers.DateTimeField(allow_null=True, help_text="Next scheduled notification, or null.")
     roadmap_status = serializers.CharField(help_text="Roadmap generation status: NOT_GENERATED, GENERATING, READY or FAILED.")
-    current_topic = CurrentTopicSerializer(
+    current_topic = EnrolledCurrentTopicSerializer(
         allow_null=True,
         help_text="First unpassed topic in an unlocked level, or null if none.",
     )

@@ -1375,6 +1375,7 @@ def get_topic_progress(user, topic: Topic) -> dict:
         in (TopicProgress.Status.PASSED, TopicProgress.Status.ADVANCED_PASSED),
         "advanced_passed": status == TopicProgress.Status.ADVANCED_PASSED,
         "completed_at": tp.completed_at if tp else None,
+        "advanced_completed_at": tp.advanced_completed_at if tp else None,
         "resource_links_viewed_at": tp.resource_links_viewed_at if tp else None,
         "advanced_quiz_available": can_take_advanced_quiz(user, topic),
         "normal_quiz_available_at": _quiz_available_at(
@@ -1417,15 +1418,76 @@ def can_take_advanced_quiz(user, topic) -> bool:
 def _quiz_available_at(user, topic, quiz_type: str):
     """When this quiz type can next be generated, or None if it can be now."""
     last = (
-        QuizAttempt.objects.filter(user=user, topic=topic, quiz_type=quiz_type)
+        QuizAttempt.objects.filter(
+            user=user, topic=topic, quiz_type=quiz_type, answers__isnull=False
+        )
         .order_by("-created_at")
         .values_list("created_at", flat=True)
         .first()
     )
-    if last is None:
+    return cooldown_end(last)
+
+
+def cooldown_end(last_created_at):
+    """End of the retake cooldown after an attempt created at this time, or None if over."""
+    if last_created_at is None:
         return None
-    end = last + timedelta(hours=RETRY_COOLDOWN_HOURS)
+    end = last_created_at + timedelta(hours=RETRY_COOLDOWN_HOURS)
     return end if end > timezone.now() else None
+
+
+def get_open_quiz_attempt(user, topic, quiz_type: str) -> QuizAttempt | None:
+    """The unsubmitted attempt for this quiz type, if any, so a reload can resume it."""
+    return (
+        QuizAttempt.objects.filter(
+            user=user, topic=topic, quiz_type=quiz_type.upper(), answers__isnull=True
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+
+def get_latest_quiz_attempt(user, topic, quiz_type: str) -> QuizAttempt | None:
+    return (
+        QuizAttempt.objects.filter(
+            user=user, topic=topic, quiz_type=quiz_type.upper(), answers__isnull=False
+        )
+        .order_by("-attempt_number")
+        .first()
+    )
+
+
+def quiz_attempt_payload(attempt: QuizAttempt) -> dict:
+    """Client view of an attempt. Answers and explanations stay hidden until it is submitted."""
+    payload = {
+        "id": attempt.id,
+        "quiz_type": attempt.quiz_type,
+        "attempt_number": attempt.attempt_number,
+        "questions": [
+            {"question": q["question"], "options": q["options"]}
+            for q in attempt.questions
+        ],
+        "total_points": attempt.total_points,
+        "answers": attempt.answers,
+        "score": attempt.score,
+        "passed": attempt.passed,
+        "submitted_at": attempt.submitted_at,
+        "results": None,
+        "correct_count": None,
+        "question_count": len(attempt.questions),
+    }
+    if attempt.answers is not None:
+        payload["results"] = [
+            {
+                "selected_index": a,
+                "correct_index": q["correct_index"],
+                "is_correct": a == q["correct_index"],
+                "explanation": q["explanation"],
+            }
+            for q, a in zip(attempt.questions, attempt.answers)
+        ]
+        payload["correct_count"] = sum(r["is_correct"] for r in payload["results"])
+    return payload
 
 
 def generate_quiz(
@@ -1542,7 +1604,8 @@ def submit_quiz(attempt_id: int, answers: list[int]) -> QuizAttempt:
     attempt.answers = answers
     attempt.score = earned_points
     attempt.passed = passed
-    attempt.save(update_fields=["answers", "score", "passed"])
+    attempt.submitted_at = timezone.now()
+    attempt.save(update_fields=["answers", "score", "passed", "submitted_at"])
 
     if attempt.quiz_type == QuizAttempt.QuizType.NORMAL:
         TopicProgress.objects.filter(user=attempt.user, topic=attempt.topic).update(
@@ -1568,6 +1631,7 @@ def submit_quiz(attempt_id: int, answers: list[int]) -> QuizAttempt:
                 tp.save(update_fields=["status", "completed_at"])
         else:
             tp.status = TopicProgress.Status.ADVANCED_PASSED
-            tp.save(update_fields=["status"])
+            tp.advanced_completed_at = timezone.now()
+            tp.save(update_fields=["status", "advanced_completed_at"])
 
     return attempt

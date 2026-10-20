@@ -134,9 +134,33 @@ class TestEnrolledSubjectsCurrentTopic:
         t2 = Topic.objects.create(subject=s, title="B", level=1, order=2)
         Topic.objects.create(subject=s, title="Locked", level=2, order=3)
         UserSubjectProgress.objects.create(user=user, subject=s)
-        assert self._get(auth_client, s) == {"id": t1.id, "title": "A"}
+        assert self._get(auth_client, s) == {
+            "id": t1.id, "title": "A", "level": 1, "order": 1, "normal_quiz_available_at": None,
+        }
         TopicProgress.objects.create(user=user, topic=t1, status=TopicProgress.Status.PASSED)
-        assert self._get(auth_client, s) == {"id": t2.id, "title": "B"}
+        assert self._get(auth_client, s) == {
+            "id": t2.id, "title": "B", "level": 1, "order": 2, "normal_quiz_available_at": None,
+        }
+
+    def test_normal_quiz_available_at_from_submitted_attempt(self, auth_client, user):
+        s = Subject.objects.create(name="CT2")
+        t = Topic.objects.create(subject=s, title="A", level=1, order=1)
+        UserSubjectProgress.objects.create(user=user, subject=s)
+        QuizAttempt.objects.create(
+            user=user, topic=t, quiz_type="NORMAL", attempt_number=1,
+            questions=[], total_points=100, answers=[],
+        )
+        assert self._get(auth_client, s)["normal_quiz_available_at"] is not None
+
+    def test_open_attempt_does_not_show_cooldown(self, auth_client, user):
+        s = Subject.objects.create(name="CT3")
+        t = Topic.objects.create(subject=s, title="A", level=1, order=1)
+        UserSubjectProgress.objects.create(user=user, subject=s)
+        QuizAttempt.objects.create(
+            user=user, topic=t, quiz_type="NORMAL", attempt_number=1,
+            questions=[], total_points=100,
+        )
+        assert self._get(auth_client, s)["normal_quiz_available_at"] is None
 
     def test_null_when_unlocked_topics_all_passed(self, auth_client, user):
         s = Subject.objects.create(name="CT2")
@@ -248,6 +272,105 @@ class TestGenerateQuizView:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "already passed" in resp.json()["detail"]
+
+
+QUESTIONS = [
+    {"question": f"Q{i}?", "options": ["a", "b", "c", "d"], "correct_index": 0, "explanation": f"E{i}"}
+    for i in range(5)
+]
+
+
+@pytest.mark.django_db
+class TestQuizResumeAndReview:
+
+    def _topic(self, subject):
+        return Topic.objects.filter(subject=subject).order_by("order").first()
+
+    def _attempt(self, user, topic, **kw):
+        return QuizAttempt.objects.create(
+            user=user, topic=topic, quiz_type="NORMAL", attempt_number=1,
+            questions=QUESTIONS, total_points=100, **kw,
+        )
+
+    @patch("apps.learning.views.generate_quiz")
+    def test_generate_resumes_open_attempt_without_answers(self, mock_generate, auth_client, user, subject, enrolled):
+        topic = self._topic(subject)
+        attempt = self._attempt(user, topic)
+        resp = auth_client.post(f"/api/learning/topics/{topic.id}/quiz/generate", {}, format="json")
+        data = resp.json()["data"]
+        assert resp.status_code == status.HTTP_200_OK
+        assert data["id"] == attempt.id and data["resumed"] is True
+        assert data["question_count"] == 5
+        assert all(set(q) == {"question", "options"} for q in data["questions"])
+        assert data["results"] is None
+        mock_generate.assert_not_called()
+
+    @patch("apps.learning.views.generate_quiz")
+    def test_generate_new_quiz_is_not_resumed(self, mock_generate, auth_client, user, subject, enrolled):
+        topic = self._topic(subject)
+        mock_generate.return_value = self._attempt(user, topic, answers=[])
+        data = auth_client.post(f"/api/learning/topics/{topic.id}/quiz/generate", {}, format="json").json()["data"]
+        assert data["resumed"] is False
+
+    def test_submit_returns_results(self, auth_client, user, subject, enrolled):
+        topic = self._topic(subject)
+        attempt = self._attempt(user, topic)
+        resp = auth_client.post(
+            f"/api/learning/topics/{topic.id}/quiz/submit",
+            {"attempt_id": attempt.id, "answers": [0, 0, 0, 1, 1]},
+            format="json",
+        )
+        data = resp.json()["data"]
+        assert data["correct_count"] == 3 and data["question_count"] == 5
+        assert data["results"][0] == {"selected_index": 0, "correct_index": 0, "is_correct": True, "explanation": "E0"}
+        assert data["results"][4]["is_correct"] is False
+        assert data["submitted_at"] is not None
+
+    def test_submit_unknown_attempt_is_404(self, auth_client, subject, enrolled):
+        topic = self._topic(subject)
+        resp = auth_client.post(
+            f"/api/learning/topics/{topic.id}/quiz/submit",
+            {"attempt_id": 999999, "answers": [0]},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_read_submitted_attempt(self, auth_client, user, subject, enrolled):
+        topic = self._topic(subject)
+        attempt = self._attempt(user, topic, answers=[0, 0, 0, 0, 1], score=80, passed=True)
+        data = auth_client.get(f"/api/learning/topics/{topic.id}/quiz/attempts/{attempt.id}").json()["data"]
+        assert data["answers"] == [0, 0, 0, 0, 1]
+        assert data["correct_count"] == 4 and data["score"] == 80
+        assert data["quiz_type"] == "NORMAL" and data["attempt_number"] == 1
+
+    def test_read_unsubmitted_attempt_hides_answers(self, auth_client, user, subject, enrolled):
+        topic = self._topic(subject)
+        attempt = self._attempt(user, topic)
+        data = auth_client.get(f"/api/learning/topics/{topic.id}/quiz/attempts/{attempt.id}").json()["data"]
+        assert data["results"] is None and data["answers"] is None
+        assert "correct_index" not in data["questions"][0]
+
+    def test_cannot_read_another_users_attempt(self, auth_client, subject, enrolled):
+        other = User.objects.create_user(email="o@b.com", password="p")
+        topic = self._topic(subject)
+        attempt = self._attempt(other, topic, answers=[0] * 5)
+        resp = auth_client.get(f"/api/learning/topics/{topic.id}/quiz/attempts/{attempt.id}")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_latest_attempt_picks_newest_submitted_of_type(self, auth_client, user, subject, enrolled):
+        topic = self._topic(subject)
+        self._attempt(user, topic, answers=[0] * 5)
+        QuizAttempt.objects.create(
+            user=user, topic=topic, quiz_type="NORMAL", attempt_number=2,
+            questions=QUESTIONS, total_points=100, answers=[1] * 5,
+        )
+        QuizAttempt.objects.create(
+            user=user, topic=topic, quiz_type="NORMAL", attempt_number=3,
+            questions=QUESTIONS, total_points=100,
+        )
+        url = f"/api/learning/topics/{topic.id}/quiz/attempts/latest"
+        assert auth_client.get(url).json()["data"]["attempt_number"] == 2
+        assert auth_client.get(url + "?quiz_type=ADVANCED").status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
@@ -375,7 +498,8 @@ class TestTopicAccess:
         p = auth_client.get(f"/api/learning/topics/{topics[0].id}").json()["data"]["progress"]
         assert p == {
             "status": "NOT_STARTED", "is_passed": False, "advanced_passed": False,
-            "completed_at": None, "resource_links_viewed_at": None,
+            "completed_at": None, "advanced_completed_at": None,
+            "resource_links_viewed_at": None,
             "advanced_quiz_available": False,
             "normal_quiz_available_at": None, "advanced_quiz_available_at": None,
             "next_topic": {"id": topics[1].id, "title": topics[1].title, "is_unlocked": True},
@@ -393,7 +517,7 @@ class TestTopicAccess:
         topic = self._topic(subject)
         attempt = QuizAttempt.objects.create(
             user=user, topic=topic, quiz_type="NORMAL", attempt_number=1,
-            questions=[], total_points=100,
+            questions=[], total_points=100, answers=[],
         )
         p = auth_client.get(f"/api/learning/topics/{topic.id}").json()["data"]["progress"]
         assert p["normal_quiz_available_at"] is not None

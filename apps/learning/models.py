@@ -144,6 +144,7 @@ class TopicProgress(models.Model):
     is_bonus = models.BooleanField(default=False)
     resource_links_viewed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    advanced_completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -172,6 +173,7 @@ class QuizAttempt(models.Model):
     total_points = models.PositiveIntegerField(default=0)
     passed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = [("user", "topic", "quiz_type", "attempt_number")]

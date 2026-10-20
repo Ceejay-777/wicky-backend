@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -17,6 +17,7 @@ from .serializers import (
     NotificationFrequencySerializer,
     NotificationStatusSerializer,
     OthersLearningEntrySerializer,
+    QuizAttemptResponseSerializer,
     ResourceLinksViewedResponseSerializer,
     RoadmapStatusResponseSerializer,
     TopicStatusResponseSerializer,
@@ -34,9 +35,12 @@ from .services import (
     check_enrollment_capacity,
     resolve_or_create_subject,
     check_level_progress,
+    cooldown_end,
     explore_subjects,
     generate_quiz,
     get_accessible_topic,
+    get_latest_quiz_attempt,
+    get_open_quiz_attempt,
     get_own_quiz_attempt,
     get_subject_detail,
     get_subject_preview,
@@ -46,6 +50,7 @@ from .services import (
     mark_subject_interest,
     others_learning,
     prefetch_topic_content,
+    quiz_attempt_payload,
     remove_subject_interest,
     retry_roadmap,
     retry_topic,
@@ -298,23 +303,21 @@ class GenerateQuizView(GenericAPIView):
         topic = get_accessible_topic(request.user, topic_id)
         quiz_type = request.data.get("quiz_type", "NORMAL")
         prior_missed_questions = request.data.get("prior_missed_questions")
-        try:
-            attempt = generate_quiz(request.user, topic, quiz_type, prior_missed_questions)
-        except ValueError as e:
-            return Response({"detail": str(e), "status": "error"}, status=status.HTTP_400_BAD_REQUEST)
-        except ProviderError as e:
-            return Response(
-                {"detail": "The AI service is temporarily unavailable. Please try again shortly.", "status": "error"},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+        # An unsubmitted attempt is resumed instead of regenerated.
+        attempt = get_open_quiz_attempt(request.user, topic, quiz_type)
+        resumed = attempt is not None
+        if attempt is None:
+            try:
+                attempt = generate_quiz(request.user, topic, quiz_type, prior_missed_questions)
+            except ValueError as e:
+                return Response({"detail": str(e), "status": "error"}, status=status.HTTP_400_BAD_REQUEST)
+            except ProviderError as e:
+                return Response(
+                    {"detail": "The AI service is temporarily unavailable. Please try again shortly.", "status": "error"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
         return Response({
-            "data": {
-                "id": attempt.id,
-                "quiz_type": attempt.quiz_type,
-                "attempt_number": attempt.attempt_number,
-                "questions": attempt.questions,
-                "total_points": attempt.total_points,
-            },
+            "data": {**quiz_attempt_payload(attempt), "resumed": resumed},
             "status": "success",
         })
 
@@ -332,25 +335,57 @@ class SubmitQuizView(GenericAPIView):
         topic = get_accessible_topic(request.user, topic_id)
         attempt_id = request.data.get("attempt_id")
         answers = request.data.get("answers")
-        get_own_quiz_attempt(request.user, topic, attempt_id)
         try:
+            get_own_quiz_attempt(request.user, topic, attempt_id)
             attempt = submit_quiz(attempt_id, answers)
-        except ValueError as e:
+        except (QuizAttempt.DoesNotExist, TypeError, ValueError) as e:
+            if isinstance(e, QuizAttempt.DoesNotExist):
+                return Response({"detail": "Not found.", "status": "error"}, status=status.HTTP_404_NOT_FOUND)
             return Response({"detail": str(e), "status": "error"}, status=status.HTTP_400_BAD_REQUEST)
         # Unlock the next level now, so a later /progress/check would report "none".
         passed_normal = attempt.passed and attempt.quiz_type == QuizAttempt.QuizType.NORMAL
         return Response({
             "data": {
-                "id": attempt.id,
-                "passed": attempt.passed,
-                "score": attempt.score,
-                "total_points": attempt.total_points,
-                "attempt_number": attempt.attempt_number,
-                "quiz_type": attempt.quiz_type,
+                **quiz_attempt_payload(attempt),
                 "level_check": _level_check(request.user, topic.subject) if passed_normal else None,
             },
             "status": "success",
         })
+
+
+class QuizAttemptView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Learning"],
+        summary="Read a submitted quiz attempt (questions, picks, results)",
+        responses={200: QuizAttemptResponseSerializer, 404: None},
+    )
+    def get(self, request, topic_id, attempt_id):
+        topic = get_accessible_topic(request.user, topic_id)
+        try:
+            attempt = get_own_quiz_attempt(request.user, topic, attempt_id)
+        except QuizAttempt.DoesNotExist:
+            return Response({"detail": "Not found.", "status": "error"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"data": quiz_attempt_payload(attempt), "status": "success"})
+
+
+class LatestQuizAttemptView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Learning"],
+        summary="Read the latest submitted attempt of a quiz type",
+        parameters=[OpenApiParameter("quiz_type", str, description="NORMAL (default) or ADVANCED.")],
+        responses={200: QuizAttemptResponseSerializer, 404: None},
+    )
+    def get(self, request, topic_id):
+        topic = get_accessible_topic(request.user, topic_id)
+        quiz_type = request.query_params.get("quiz_type", "NORMAL")
+        attempt = get_latest_quiz_attempt(request.user, topic, quiz_type)
+        if attempt is None:
+            return Response({"detail": "Not found.", "status": "error"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"data": quiz_attempt_payload(attempt), "status": "success"})
 
 
 class MarkResourceLinksViewedView(GenericAPIView):
@@ -477,7 +512,7 @@ class EnrolledSubjectsView(GenericAPIView):
         responses={200: EnrolledSubjectListSerializer(many=True)},
     )
     def get(self, request):
-        from django.db.models import Count, OuterRef, Q, Subquery
+        from django.db.models import Count, Max, OuterRef, Q, Subquery
         from math import floor
 
         # "Current" = first unpassed topic in an unlocked level.
@@ -521,8 +556,22 @@ class EnrolledSubjectsView(GenericAPIView):
                 ),
                 current_topic_id=Subquery(current.values("id")[:1]),
                 current_topic_title=Subquery(current.values("title")[:1]),
+                current_topic_level=Subquery(current.values("level")[:1]),
+                current_topic_order=Subquery(current.values("order")[:1]),
             )
             .order_by("-created_at")
+        )
+
+        usps = list(usps)
+        last_normal = dict(
+            QuizAttempt.objects.filter(
+                user=request.user,
+                quiz_type=QuizAttempt.QuizType.NORMAL,
+                answers__isnull=False,
+                topic_id__in=[u.current_topic_id for u in usps if u.current_topic_id],
+            )
+            .values_list("topic_id")
+            .annotate(last=Max("created_at"))
         )
 
         results = []
@@ -545,7 +594,13 @@ class EnrolledSubjectsView(GenericAPIView):
                 "next_due_at": usp.next_due_at,
                 "roadmap_status": usp.subject.roadmap_status,
                 "current_topic": (
-                    {"id": usp.current_topic_id, "title": usp.current_topic_title}
+                    {
+                        "id": usp.current_topic_id,
+                        "title": usp.current_topic_title,
+                        "level": usp.current_topic_level,
+                        "order": usp.current_topic_order,
+                        "normal_quiz_available_at": cooldown_end(last_normal.get(usp.current_topic_id)),
+                    }
                     if usp.current_topic_id is not None else None
                 ),
             })

@@ -185,7 +185,7 @@ _LONG_FORM_CHAIN = [
 ]
 
 # Each action maps to an ordered chain. The dispatcher tries each step in
-# order until one succeeds. Chosen from docs/groq-model-test-report.md.
+# order until one succeeds. Chosen from docs/reference/ai-providers.md.
 _ACTION_CHAINS: dict[str, list[ChainStep]] = {
     "roadmap": _LONG_FORM_CHAIN,
     "topic": _LONG_FORM_CHAIN,
