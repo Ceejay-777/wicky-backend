@@ -6,14 +6,21 @@ from django.utils import timezone
 from apps.learning.models import (
     Subject, Topic, TopicProgress, QuizAttempt, UserSubjectProgress,
 )
+from apps.ai.exceptions import ProviderError
 from apps.learning.services import (
-    generate_quiz, submit_quiz, mark_resource_links_viewed,
+    request_quiz_generation, build_quiz, QUIZ_STALE_AFTER,
+    submit_quiz, mark_resource_links_viewed,
     can_take_advanced_quiz, _next_attempt_number, _validate_quiz_response,
     _quiz_available_at, get_topic_progress,
 )
 from apps.learning.exceptions import GenerationError
 
 User = get_user_model()
+
+
+def generate_quiz(user, topic, quiz_type, prior_missed_questions=None):
+    """Request a quiz. Tasks run eagerly in tests, so the attempt is READY (or FAILED) on return."""
+    return request_quiz_generation(user, topic, quiz_type, prior_missed_questions)[0]
 
 
 @pytest.fixture
@@ -116,6 +123,7 @@ class TestGenerateQuiz:
         mock_gen.return_value = _make_quiz_data(5, 100)
         a1 = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         assert a1.attempt_number == 1
+        submit_quiz(a1.id, [1] * 5)
         QuizAttempt.objects.filter(id=a1.id).update(
             created_at=timezone.now() - timedelta(hours=2),
         )
@@ -209,10 +217,10 @@ class TestGenerateQuiz:
         assert mock_gen.call_count == 2
 
     @patch("apps.learning.services.generate_content")
-    def test_malformed_exhausted_raises(self, mock_gen, user, topic):
+    def test_malformed_exhausted_marks_failed(self, mock_gen, user, topic):
         mock_gen.return_value = {"questions": [], "total_points": 50}
-        with pytest.raises(GenerationError):
-            generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
+        attempt = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
+        assert attempt.status == QuizAttempt.Status.FAILED
         assert mock_gen.call_count == 2
 
 
@@ -306,6 +314,153 @@ class TestSubmitQuiz:
         attempt = self._create_attempt(user, topic, "ADVANCED", 200)
         submit_quiz(attempt.id, self.VALID_ANSWERS)
         assert not can_take_advanced_quiz(user, topic)
+
+
+def _open_attempt(user, topic, **kw):
+    kw.setdefault("status", QuizAttempt.Status.GENERATING)
+    kw.setdefault("generation_started_at", timezone.now())
+    return QuizAttempt.objects.create(
+        user=user, topic=topic, quiz_type="NORMAL", attempt_number=1,
+        questions=[], **kw,
+    )
+
+
+@pytest.mark.django_db
+class TestRequestQuizGeneration:
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_creates_generating_attempt_and_queues_once(self, mock_delay, user, topic):
+        attempt, started = request_quiz_generation(
+            user, topic, "normal", ["Missed one?"]
+        )
+        assert started is True
+        assert attempt.status == QuizAttempt.Status.GENERATING
+        assert attempt.questions == []
+        mock_delay.assert_called_once_with(attempt.id, ["Missed one?"])
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_second_call_returns_same_attempt_without_queueing(self, mock_delay, user, topic):
+        a1, _ = request_quiz_generation(user, topic, "NORMAL")
+        a2, started = request_quiz_generation(user, topic, "NORMAL")
+        assert a2.id == a1.id and started is False
+        assert mock_delay.call_count == 1
+        assert QuizAttempt.objects.count() == 1
+
+    @patch("apps.learning.services.generate_content")
+    def test_ready_attempt_is_resumed_with_no_ai_call(self, mock_gen, user, topic):
+        ready = _open_attempt(user, topic, status=QuizAttempt.Status.READY)
+        attempt, started = request_quiz_generation(user, topic, "NORMAL")
+        assert attempt.id == ready.id and started is False
+        mock_gen.assert_not_called()
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_failed_attempt_is_requeued_on_the_same_row(self, mock_delay, user, topic):
+        failed = _open_attempt(user, topic, status=QuizAttempt.Status.FAILED)
+        attempt, started = request_quiz_generation(user, topic, "NORMAL")
+        assert attempt.id == failed.id and started is True
+        assert attempt.status == QuizAttempt.Status.GENERATING
+        assert attempt.attempt_number == 1
+        mock_delay.assert_called_once()
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_stale_generating_attempt_is_reclaimed(self, mock_delay, user, topic):
+        _open_attempt(
+            user, topic,
+            generation_started_at=timezone.now() - QUIZ_STALE_AFTER - timedelta(minutes=1),
+        )
+        request_quiz_generation(user, topic, "NORMAL")
+        mock_delay.assert_called_once()
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_fresh_generating_attempt_is_left_alone(self, mock_delay, user, topic):
+        _open_attempt(user, topic)
+        request_quiz_generation(user, topic, "NORMAL")
+        mock_delay.assert_not_called()
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_recheck_under_lock_returns_the_winner(self, mock_delay, user, topic):
+        winner = _open_attempt(user, topic)
+        # First look finds nothing; by the time the row lock is ours the winner exists.
+        with patch("apps.learning.services.get_open_quiz_attempt", side_effect=[None, winner]):
+            attempt, started = request_quiz_generation(user, topic, "NORMAL")
+        assert attempt.id == winner.id and started is False
+        mock_delay.assert_not_called()
+        assert QuizAttempt.objects.count() == 1
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_broker_down_marks_failed(self, mock_delay, user, topic):
+        from kombu.exceptions import OperationalError
+
+        mock_delay.side_effect = OperationalError("broker down")
+        attempt, _ = request_quiz_generation(user, topic, "NORMAL")
+        assert attempt.status == QuizAttempt.Status.FAILED
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_eligibility_errors_create_nothing(self, mock_delay, user, topic):
+        with pytest.raises(ValueError, match="Advanced quiz not available"):
+            request_quiz_generation(user, topic, "ADVANCED")
+        assert QuizAttempt.objects.count() == 0
+        mock_delay.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestGenerateQuizTask:
+
+    @patch("apps.learning.events.send_event")
+    @patch("apps.learning.services.generate_content")
+    def test_success_marks_ready_and_notifies_only_the_owner(self, mock_gen, mock_send, user, topic):
+        mock_gen.return_value = _make_quiz_data(5, 100)
+        attempt = generate_quiz(user, topic, "NORMAL")
+        assert attempt.status == QuizAttempt.Status.READY
+        mock_send.assert_called_once()
+        channel, event, payload = mock_send.call_args[0]
+        assert channel == f"user-{user.id}" and event == "quiz.status"
+        assert payload == {
+            "subject_id": topic.subject_id, "topic_id": topic.id,
+            "attempt_id": attempt.id, "quiz_type": "NORMAL", "status": "READY",
+        }
+
+    @patch("apps.learning.services.generate_content")
+    def test_redelivered_task_makes_no_ai_call(self, mock_gen, user, topic):
+        ready = _open_attempt(user, topic, status=QuizAttempt.Status.READY)
+        assert build_quiz(ready.id) is False
+        mock_gen.assert_not_called()
+
+    @patch("apps.learning.services.generate_content")
+    def test_provider_error_marks_failed_only_on_last_retry(self, mock_gen, user, topic):
+        from apps.learning.tasks import generate_quiz_for_attempt
+
+        mock_gen.side_effect = ProviderError("down", provider="groq")
+        attempt = _open_attempt(user, topic)
+        with pytest.raises(ProviderError):
+            generate_quiz_for_attempt(attempt.id)
+        attempt.refresh_from_db()
+        assert attempt.status == QuizAttempt.Status.GENERATING
+
+        generate_quiz_for_attempt.push_request(retries=generate_quiz_for_attempt.max_retries)
+        try:
+            with pytest.raises(ProviderError):
+                generate_quiz_for_attempt(attempt.id)
+        finally:
+            generate_quiz_for_attempt.pop_request()
+        attempt.refresh_from_db()
+        assert attempt.status == QuizAttempt.Status.FAILED
+
+    def test_submit_requires_ready(self, user, topic):
+        attempt = _open_attempt(user, topic)
+        with pytest.raises(ValueError, match="not ready"):
+            submit_quiz(attempt.id, [0] * 5)
+
+    def test_cleanup_fails_stale_generating_attempts(self, user, topic):
+        from apps.learning.tasks import cleanup_stuck_generations
+
+        stale = _open_attempt(
+            user, topic,
+            generation_started_at=timezone.now() - QUIZ_STALE_AFTER - timedelta(minutes=1),
+        )
+        cleanup_stuck_generations()
+        stale.refresh_from_db()
+        assert stale.status == QuizAttempt.Status.FAILED
 
 
 @pytest.mark.django_db
@@ -404,7 +559,6 @@ class TestValidateQuizResponse:
     def test_prompt_contains_no_letter_label_instruction(self, user, topic):
         with patch("apps.learning.services.generate_content") as gen:
             gen.return_value = _make_quiz_data(5, 100)
-            from apps.learning.services import generate_quiz
             generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
             prompt = gen.call_args[1]["prompt"]
             assert "labeled a/b/c/d" not in prompt

@@ -1461,6 +1461,7 @@ def quiz_attempt_payload(attempt: QuizAttempt) -> dict:
     """Client view of an attempt. Answers and explanations stay hidden until it is submitted."""
     payload = {
         "id": attempt.id,
+        "status": attempt.status,
         "quiz_type": attempt.quiz_type,
         "attempt_number": attempt.attempt_number,
         "questions": [
@@ -1490,13 +1491,10 @@ def quiz_attempt_payload(attempt: QuizAttempt) -> dict:
     return payload
 
 
-def generate_quiz(
-    user,
-    topic,
-    quiz_type: str,
-    prior_missed_questions: list[str] | None = None,
-) -> QuizAttempt:
-    quiz_type = quiz_type.upper()
+QUIZ_STALE_AFTER = timedelta(minutes=15)
+
+
+def _check_quiz_allowed(user, topic, quiz_type: str) -> None:
     tp, _ = TopicProgress.objects.get_or_create(user=user, topic=topic)
 
     if quiz_type == QuizAttempt.QuizType.ADVANCED:
@@ -1512,6 +1510,98 @@ def generate_quiz(
     if available_at is not None:
         remaining = math.ceil((available_at - timezone.now()).total_seconds() / 60)
         raise ValueError(f"Please wait {remaining} minutes before retaking this quiz")
+
+
+def mark_quiz_failed(attempt_id: int) -> None:
+    from .events import publish_quiz_status
+
+    QuizAttempt.objects.filter(
+        id=attempt_id, status=QuizAttempt.Status.GENERATING
+    ).update(status=QuizAttempt.Status.FAILED)
+    publish_quiz_status(attempt_id)
+
+
+def _claim_for_retry(attempt_id: int) -> bool:
+    """Atomically take a FAILED or stale GENERATING attempt back to GENERATING."""
+    now = timezone.now()
+    return bool(
+        QuizAttempt.objects.filter(id=attempt_id)
+        .filter(
+            Q(status=QuizAttempt.Status.FAILED)
+            | Q(
+                status=QuizAttempt.Status.GENERATING,
+                generation_started_at__lt=now - QUIZ_STALE_AFTER,
+            )
+        )
+        .update(status=QuizAttempt.Status.GENERATING, generation_started_at=now)
+    )
+
+
+def request_quiz_generation(
+    user,
+    topic,
+    quiz_type: str,
+    prior_missed_questions: list[str] | None = None,
+) -> tuple[QuizAttempt, bool]:
+    """Start (or resume) the quiz for this user, topic and type.
+
+    Returns ``(attempt, started)``; ``started`` is True when this call queued a
+    generation (new attempt or retry). At most one unsubmitted attempt exists per
+    user, topic and type: an existing one is returned without any AI call, a
+    FAILED or stale one is re-queued on the same row, and concurrent callers
+    wait on a row lock and then get the winner's row. The task itself never claims.
+    """
+    from .tasks import generate_quiz_for_attempt
+
+    quiz_type = quiz_type.upper()
+    attempt = get_open_quiz_attempt(user, topic, quiz_type)
+    if attempt is None:
+        # The row lock serializes concurrent claims for this learner and topic, so
+        # the open-attempt check and the insert cannot interleave (a unique
+        # constraint alone would let a late caller take the next attempt number).
+        # No AI call happens inside this short transaction.
+        with transaction.atomic():
+            tp, _ = TopicProgress.objects.get_or_create(user=user, topic=topic)
+            TopicProgress.objects.select_for_update().get(pk=tp.pk)
+            attempt = get_open_quiz_attempt(user, topic, quiz_type)
+            if attempt is None:
+                _check_quiz_allowed(user, topic, quiz_type)
+                attempt = QuizAttempt.objects.create(
+                    user=user,
+                    topic=topic,
+                    quiz_type=quiz_type,
+                    attempt_number=_next_attempt_number(user, topic, quiz_type),
+                    questions=[],
+                    status=QuizAttempt.Status.GENERATING,
+                    generation_started_at=timezone.now(),
+                )
+                claimed = True
+            else:
+                claimed = False  # another request won while we waited for the lock
+    else:
+        claimed = _claim_for_retry(attempt.id)
+
+    if claimed:
+        try:
+            generate_quiz_for_attempt.delay(attempt.id, prior_missed_questions or [])
+        except BrokerOperationalError:
+            # Nothing will run; surface FAILED so the learner can retry.
+            mark_quiz_failed(attempt.id)
+    attempt.refresh_from_db()
+    return attempt, claimed
+
+
+def build_quiz(attempt_id: int, prior_missed_questions: list[str] | None = None) -> bool:
+    """Generate the questions for a GENERATING attempt. False when there was nothing to do.
+
+    The status check also makes a redelivered task a no-op, so the AI is not
+    called twice for the same attempt.
+    """
+    attempt = QuizAttempt.objects.select_related("topic__subject").get(id=attempt_id)
+    if attempt.status != QuizAttempt.Status.GENERATING:
+        return False
+    topic = attempt.topic
+    quiz_type = attempt.quiz_type
 
     schema = (
         NORMAL_QUIZ_SCHEMA
@@ -1566,23 +1656,23 @@ def generate_quiz(
             if attempt >= max_attempts - 1:
                 raise
 
-    attempt_number = _next_attempt_number(user, topic, quiz_type)
-
-    attempt_obj = QuizAttempt.objects.create(
-        user=user,
-        topic=topic,
-        quiz_type=quiz_type,
-        attempt_number=attempt_number,
-        questions=validated["questions"],
-        total_points=validated["total_points"],
+    # Filtering on GENERATING drops the result if the attempt was failed or re-claimed meanwhile.
+    return bool(
+        QuizAttempt.objects.filter(
+            id=attempt_id, status=QuizAttempt.Status.GENERATING
+        ).update(
+            questions=validated["questions"],
+            total_points=validated["total_points"],
+            status=QuizAttempt.Status.READY,
+        )
     )
-
-    return attempt_obj
 
 
 def submit_quiz(attempt_id: int, answers: list[int]) -> QuizAttempt:
     attempt = QuizAttempt.objects.select_related("topic", "user").get(id=attempt_id)
 
+    if attempt.status != QuizAttempt.Status.READY:
+        raise ValueError("Quiz is not ready")
     if attempt.answers is not None:
         raise ValueError("Quiz already submitted")
 

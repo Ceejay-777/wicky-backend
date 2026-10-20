@@ -12,6 +12,7 @@ Django 5.1 · DRF · Celery · PostgreSQL/pgvector · Redis · Groq (text) · Ge
 | Deploy, env vars, services, CI | `docs/reference/deployment.md`, `.env.example` |
 | Open bugs / ideas | `docs/backlog/known-bugs.md`, `docs/backlog/follow-ups.md` |
 | SSE events | `apps/learning/events.py`, `apps/core/eventstream.py` |
+| Live test with real Celery/Redis/SSE, seed users and subjects | `docs/reference/live-testing.md`, `docs/scripts/quiz_live_check.py` |
 
 ## Commands
 
@@ -22,6 +23,7 @@ python manage.py <cmd> --settings=config.settings.test   # manage.py defaults to
 python manage.py runserver 8000          # no SSE
 uvicorn config.asgi:application --port 8000 --reload     # with SSE
 celery -A config worker -l info          # and: celery -A config beat -l info
+python manage.py seed_subjects | seed_demo   # seed data; see docs/reference/live-testing.md
 ```
 
 ## Architecture rules
@@ -45,7 +47,7 @@ celery -A config worker -l info          # and: celery -A config beat -l info
 - **Roadmap:** async. `POST /subjects/create` enrolls immediately and queues `generate_roadmap_for_subject`; `POST /subjects/<id>/roadmap/retry` retries.
 - **Status is pushed over SSE, but the DB is the source of truth.** Events are not replayable; clients must also GET.
 - **Topic access:** every topic endpoint goes through `get_accessible_topic` (404 not enrolled, 403 level locked).
-- **Quiz generation is synchronous** (in the request) and never leaks answers before submit. See `docs/flows/quiz.md`.
+- **Quiz generation is async**, claimed through `request_quiz_generation` (one unsubmitted attempt per user, topic and type; the task never claims) and announced by `quiz.status`. Answers are never sent before submit. See `docs/flows/quiz.md`.
 - `TopicProgress.Status` values in use: `NOT_STARTED`, `PASSED`, `ADVANCED_PASSED`. `READING` and `QUIZ_READY` are never set.
 
 ## Code rules

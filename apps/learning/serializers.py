@@ -89,8 +89,9 @@ class GenerateQuizRequestSerializer(serializers.Serializer):
         help_text="Type of quiz to generate (NORMAL or ADVANCED).",
     )
     prior_missed_questions = serializers.ListField(
-        child=serializers.CharField(),
+        child=serializers.CharField(max_length=500),
         required=False,
+        max_length=20,
         help_text="List of question texts the learner previously got wrong, for focused retry.",
     )
 
@@ -109,6 +110,7 @@ class QuizQuestionResultSerializer(serializers.Serializer):
 
 class QuizAttemptResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Quiz attempt ID.")
+    status = serializers.CharField(help_text="GENERATING, READY or FAILED. Questions are empty until READY; a quiz.status event announces the change. POST /quiz/generate again retries a FAILED one.")
     quiz_type = serializers.CharField(help_text="NORMAL or ADVANCED.")
     attempt_number = serializers.IntegerField(help_text="Attempt number for this quiz type and topic.")
     questions = QuizQuestionSerializer(many=True, help_text="Questions without answers or explanations; those come back in `results` once submitted.")
@@ -123,7 +125,7 @@ class QuizAttemptResponseSerializer(serializers.Serializer):
 
 
 class GenerateQuizResponseSerializer(QuizAttemptResponseSerializer):
-    resumed = serializers.BooleanField(help_text="True when an unsubmitted attempt was returned instead of generating a new quiz.")
+    resumed = serializers.BooleanField(help_text="True when this call started no generation: an existing unsubmitted attempt (ready or still generating) was returned. False for a new quiz or a retry of a FAILED one.")
 
 
 class SubmitQuizRequestSerializer(serializers.Serializer):

@@ -5,7 +5,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import QuizAttempt, Subject, Topic, TopicProgress, UserSubjectProgress
-from apps.ai.exceptions import ProviderError
 from .serializers import (
     CreateSubjectSerializer,
     EnrolledSubjectListSerializer,
@@ -37,10 +36,8 @@ from .services import (
     check_level_progress,
     cooldown_end,
     explore_subjects,
-    generate_quiz,
     get_accessible_topic,
     get_latest_quiz_attempt,
-    get_open_quiz_attempt,
     get_own_quiz_attempt,
     get_subject_detail,
     get_subject_preview,
@@ -51,6 +48,7 @@ from .services import (
     others_learning,
     prefetch_topic_content,
     quiz_attempt_payload,
+    request_quiz_generation,
     remove_subject_interest,
     retry_roadmap,
     retry_topic,
@@ -295,31 +293,31 @@ class GenerateQuizView(GenericAPIView):
 
     @extend_schema(
         tags=["Learning"],
-        summary="Generate a quiz for a topic",
+        summary="Start (or resume) a quiz for a topic",
         request=GenerateQuizRequestSerializer,
-        responses={200: GenerateQuizResponseSerializer, 400: None},
+        responses={200: GenerateQuizResponseSerializer, 202: GenerateQuizResponseSerializer, 400: None},
     )
     def post(self, request, topic_id):
         topic = get_accessible_topic(request.user, topic_id)
-        quiz_type = request.data.get("quiz_type", "NORMAL")
-        prior_missed_questions = request.data.get("prior_missed_questions")
-        # An unsubmitted attempt is resumed instead of regenerated.
-        attempt = get_open_quiz_attempt(request.user, topic, quiz_type)
-        resumed = attempt is not None
-        if attempt is None:
-            try:
-                attempt = generate_quiz(request.user, topic, quiz_type, prior_missed_questions)
-            except ValueError as e:
-                return Response({"detail": str(e), "status": "error"}, status=status.HTTP_400_BAD_REQUEST)
-            except ProviderError as e:
-                return Response(
-                    {"detail": "The AI service is temporarily unavailable. Please try again shortly.", "status": "error"},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-        return Response({
-            "data": {**quiz_attempt_payload(attempt), "resumed": resumed},
-            "status": "success",
-        })
+        body = GenerateQuizRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            attempt, started = request_quiz_generation(
+                request.user,
+                topic,
+                body.validated_data["quiz_type"],
+                body.validated_data.get("prior_missed_questions"),
+            )
+        except ValueError as e:
+            return Response({"detail": str(e), "status": "error"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"data": {**quiz_attempt_payload(attempt), "resumed": not started}, "status": "success"},
+            status=(
+                status.HTTP_202_ACCEPTED
+                if attempt.status == QuizAttempt.Status.GENERATING
+                else status.HTTP_200_OK
+            ),
+        )
 
 
 class SubmitQuizView(GenericAPIView):

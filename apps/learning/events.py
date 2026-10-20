@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 ROADMAP_STATUS_EVENT = "roadmap.status"
 TOPIC_STATUS_EVENT = "topic.status"
+QUIZ_STATUS_EVENT = "quiz.status"
 
 
 def _publish_to_enrolled(subject_id: int, event: str, payload: dict) -> None:
@@ -72,3 +73,24 @@ def publish_topic_status(topic_id: int) -> None:
             "review_status": topic.review_status,
         },
     )
+
+
+def publish_quiz_status(attempt_id: int) -> None:
+    """Tell the attempt's owner (only) that a quiz became READY or FAILED."""
+    from .models import QuizAttempt
+
+    attempt = QuizAttempt.objects.select_related("topic").get(id=attempt_id)
+    try:
+        send_event(
+            user_channel(attempt.user_id),
+            QUIZ_STATUS_EVENT,
+            {
+                "subject_id": attempt.topic.subject_id,
+                "topic_id": attempt.topic_id,
+                "attempt_id": attempt.id,
+                "quiz_type": attempt.quiz_type,
+                "status": attempt.status,
+            },
+        )
+    except Exception:
+        logger.exception("Failed to publish %s for attempt %s", QUIZ_STATUS_EVENT, attempt_id)

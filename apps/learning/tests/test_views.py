@@ -243,13 +243,13 @@ class TestGenerateQuizView:
         resp = client.post(f"/api/learning/topics/{topic.id}/quiz/generate")
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
-    @patch("apps.learning.views.generate_quiz")
+    @patch("apps.learning.views.request_quiz_generation")
     def test_generates_normal_quiz(self, mock_generate, auth_client, user, subject, enrolled):
         topic = Topic.objects.filter(subject=subject).first()
-        mock_generate.return_value = QuizAttempt.objects.create(
+        mock_generate.return_value = (QuizAttempt.objects.create(
             user=user, topic=topic, quiz_type="NORMAL", attempt_number=1,
             questions=[], total_points=100,
-        )
+        ), True)
         resp = auth_client.post(
             f"/api/learning/topics/{topic.id}/quiz/generate",
             {"quiz_type": "NORMAL"},
@@ -261,7 +261,7 @@ class TestGenerateQuizView:
         assert data["attempt_number"] == 1
         assert data["total_points"] == 100
 
-    @patch("apps.learning.views.generate_quiz")
+    @patch("apps.learning.views.request_quiz_generation")
     def test_generate_handles_value_error(self, mock_generate, auth_client, subject, enrolled):
         topic = Topic.objects.filter(subject=subject).first()
         mock_generate.side_effect = ValueError("Normal quiz already passed for this topic")
@@ -272,6 +272,49 @@ class TestGenerateQuizView:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "already passed" in resp.json()["detail"]
+
+    def test_retrying_a_failed_quiz_is_not_resumed(self, auth_client, user, subject, enrolled):
+        topic = Topic.objects.filter(subject=subject).first()
+        QuizAttempt.objects.create(
+            user=user, topic=topic, quiz_type="NORMAL", attempt_number=1,
+            questions=[], status=QuizAttempt.Status.FAILED,
+        )
+        with patch("apps.learning.tasks.generate_quiz_for_attempt.delay") as delay:
+            resp = auth_client.post(f"/api/learning/topics/{topic.id}/quiz/generate", {}, format="json")
+        assert resp.json()["data"]["resumed"] is False
+        assert resp.json()["data"]["status"] == "GENERATING"
+        delay.assert_called_once()
+
+    def test_rejects_unknown_quiz_type(self, auth_client, subject, enrolled):
+        topic = Topic.objects.filter(subject=subject).first()
+        resp = auth_client.post(
+            f"/api/learning/topics/{topic.id}/quiz/generate", {"quiz_type": "EXPERT"}, format="json"
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert QuizAttempt.objects.count() == 0
+
+    @patch("apps.learning.tasks.generate_quiz_for_attempt.delay")
+    def test_returns_202_while_generating_and_dedupes(self, mock_delay, auth_client, subject, enrolled):
+        topic = Topic.objects.filter(subject=subject).first()
+        url = f"/api/learning/topics/{topic.id}/quiz/generate"
+        first = auth_client.post(url, {}, format="json")
+        second = auth_client.post(url, {}, format="json")
+        assert first.status_code == status.HTTP_202_ACCEPTED
+        data = first.json()["data"]
+        assert data["status"] == "GENERATING" and data["questions"] == [] and data["resumed"] is False
+        assert second.status_code == status.HTTP_202_ACCEPTED
+        assert second.json()["data"]["id"] == data["id"] and second.json()["data"]["resumed"] is True
+        mock_delay.assert_called_once()
+
+    @patch("apps.learning.services.generate_content")
+    def test_returns_ready_quiz_without_answers(self, mock_gen, auth_client, subject, enrolled):
+        topic = Topic.objects.filter(subject=subject).first()
+        mock_gen.return_value = {"questions": QUESTIONS, "total_points": 100}
+        resp = auth_client.post(f"/api/learning/topics/{topic.id}/quiz/generate", {}, format="json")
+        data = resp.json()["data"]
+        assert resp.status_code == status.HTTP_200_OK
+        assert data["status"] == "READY" and data["question_count"] == 5
+        assert all(set(q) == {"question", "options"} for q in data["questions"])
 
 
 QUESTIONS = [
@@ -292,7 +335,7 @@ class TestQuizResumeAndReview:
             questions=QUESTIONS, total_points=100, **kw,
         )
 
-    @patch("apps.learning.views.generate_quiz")
+    @patch("apps.learning.services.generate_content")
     def test_generate_resumes_open_attempt_without_answers(self, mock_generate, auth_client, user, subject, enrolled):
         topic = self._topic(subject)
         attempt = self._attempt(user, topic)
@@ -305,10 +348,10 @@ class TestQuizResumeAndReview:
         assert data["results"] is None
         mock_generate.assert_not_called()
 
-    @patch("apps.learning.views.generate_quiz")
+    @patch("apps.learning.services.generate_content")
     def test_generate_new_quiz_is_not_resumed(self, mock_generate, auth_client, user, subject, enrolled):
         topic = self._topic(subject)
-        mock_generate.return_value = self._attempt(user, topic, answers=[])
+        mock_generate.return_value = {"questions": QUESTIONS, "total_points": 100}
         data = auth_client.post(f"/api/learning/topics/{topic.id}/quiz/generate", {}, format="json").json()["data"]
         assert data["resumed"] is False
 

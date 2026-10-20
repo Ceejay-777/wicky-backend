@@ -17,7 +17,7 @@ Settings: `config.settings.production` in the image; `docker-compose.yml` (web, 
 | Task | Every | Does |
 |---|---|---|
 | `learning.dispatch_notifications` | 15 min | fans out `send_notification` for due subjects |
-| `learning.cleanup_stuck_generations` | 60 min | topics stuck in `GENERATING` > 1h are reset to `NOT_GENERATED`; stuck roadmaps become `FAILED` |
+| `learning.cleanup_stuck_generations` | 60 min | topics stuck in `GENERATING` > 1h are reset to `NOT_GENERATED`; stuck roadmaps become `FAILED`; quizzes stuck > 15 min become `FAILED` |
 | `learning.auto_select_subjects` | 15 min | enrolls opted-in idle users into a suggestion |
 
 ## Redis

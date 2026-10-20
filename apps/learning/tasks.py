@@ -139,6 +139,41 @@ def generate_roadmap_for_subject(self, subject_id: int) -> None:
     generate_initial_batch(subject)
 
 
+@shared_task(
+    bind=True,
+    name="learning.generate_quiz_for_attempt",
+    autoretry_for=(ProviderError,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+    max_retries=2,  # each retry reruns the AI chain
+)
+def generate_quiz_for_attempt(self, attempt_id: int, prior_missed_questions=None) -> None:
+    """Fill in a GENERATING quiz attempt claimed by ``request_quiz_generation``."""
+    from .events import publish_quiz_status
+    from .exceptions import GenerationError
+    from .services import build_quiz, mark_quiz_failed
+
+    try:
+        built = build_quiz(attempt_id, prior_missed_questions)
+    except GenerationError:
+        sentry_sdk.capture_message(
+            f"Quiz attempt {attempt_id}: validation failed after retries",
+            level="error",
+        )
+        mark_quiz_failed(attempt_id)
+        return
+    except ProviderError:
+        # Re-raised so autoretry_for can retry; only on the last attempt do we
+        # also surface FAILED, because no further retry will update the state.
+        if self.request.retries >= self.max_retries:
+            mark_quiz_failed(attempt_id)
+        raise
+
+    if built:
+        publish_quiz_status(attempt_id)
+
+
 @shared_task(name="learning.dispatch_notifications")
 def dispatch_notifications():
     from .services import get_due_notifications
@@ -266,6 +301,19 @@ def cleanup_stuck_generations() -> None:
         review_status=Topic.ReviewStatus.PENDING,
         generation_started_at=None,
     )
+
+    # A quiz the learner is waiting on is not worth an hour: surface FAILED so the page offers a retry.
+    from .models import QuizAttempt
+    from .services import QUIZ_STALE_AFTER, mark_quiz_failed
+
+    stuck_quiz_ids = list(
+        QuizAttempt.objects.filter(
+            status=QuizAttempt.Status.GENERATING,
+            generation_started_at__lt=timezone.now() - QUIZ_STALE_AFTER,
+        ).values_list("id", flat=True)
+    )
+    for attempt_id in stuck_quiz_ids:
+        mark_quiz_failed(attempt_id)
 
     # Tell open pages the topic changed so they refetch (opening it restarts generation).
     for topic_id in stuck_ids + failed_ids:
