@@ -144,6 +144,7 @@ class TopicProgress(models.Model):
     is_bonus = models.BooleanField(default=False)
     resource_links_viewed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    advanced_completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -157,6 +158,11 @@ class QuizAttempt(models.Model):
     class QuizType(models.TextChoices):
         NORMAL = "NORMAL", "Normal"
         ADVANCED = "ADVANCED", "Advanced"
+
+    class Status(models.TextChoices):
+        GENERATING = "GENERATING", "Generating"
+        READY = "READY", "Ready"
+        FAILED = "FAILED", "Failed"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="quiz_attempts"
@@ -172,6 +178,12 @@ class QuizAttempt(models.Model):
     total_points = models.PositiveIntegerField(default=0)
     passed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    # READY by default so rows created before async generation (all have questions) stay valid.
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.READY
+    )
+    generation_started_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = [("user", "topic", "quiz_type", "attempt_number")]

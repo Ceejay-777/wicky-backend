@@ -173,7 +173,7 @@ class TestGenerateContent:
 
 
 class TestActionChains:
-    """The chains and per-action settings come from docs/groq-model-test-report.md."""
+    """The chains and per-action settings come from docs/reference/ai-providers.md."""
 
     EXPECTED = {
         "roadmap": [("openai/gpt-oss-120b", "medium"), ("qwen/qwen3.8-27b", None), ("openai/gpt-oss-20b", "medium")],

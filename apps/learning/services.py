@@ -1375,6 +1375,7 @@ def get_topic_progress(user, topic: Topic) -> dict:
         in (TopicProgress.Status.PASSED, TopicProgress.Status.ADVANCED_PASSED),
         "advanced_passed": status == TopicProgress.Status.ADVANCED_PASSED,
         "completed_at": tp.completed_at if tp else None,
+        "advanced_completed_at": tp.advanced_completed_at if tp else None,
         "resource_links_viewed_at": tp.resource_links_viewed_at if tp else None,
         "advanced_quiz_available": can_take_advanced_quiz(user, topic),
         "normal_quiz_available_at": _quiz_available_at(
@@ -1417,24 +1418,83 @@ def can_take_advanced_quiz(user, topic) -> bool:
 def _quiz_available_at(user, topic, quiz_type: str):
     """When this quiz type can next be generated, or None if it can be now."""
     last = (
-        QuizAttempt.objects.filter(user=user, topic=topic, quiz_type=quiz_type)
+        QuizAttempt.objects.filter(
+            user=user, topic=topic, quiz_type=quiz_type, answers__isnull=False
+        )
         .order_by("-created_at")
         .values_list("created_at", flat=True)
         .first()
     )
-    if last is None:
+    return cooldown_end(last)
+
+
+def cooldown_end(last_created_at):
+    """End of the retake cooldown after an attempt created at this time, or None if over."""
+    if last_created_at is None:
         return None
-    end = last + timedelta(hours=RETRY_COOLDOWN_HOURS)
+    end = last_created_at + timedelta(hours=RETRY_COOLDOWN_HOURS)
     return end if end > timezone.now() else None
 
 
-def generate_quiz(
-    user,
-    topic,
-    quiz_type: str,
-    prior_missed_questions: list[str] | None = None,
-) -> QuizAttempt:
-    quiz_type = quiz_type.upper()
+def get_open_quiz_attempt(user, topic, quiz_type: str) -> QuizAttempt | None:
+    """The unsubmitted attempt for this quiz type, if any, so a reload can resume it."""
+    return (
+        QuizAttempt.objects.filter(
+            user=user, topic=topic, quiz_type=quiz_type.upper(), answers__isnull=True
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+
+def get_latest_quiz_attempt(user, topic, quiz_type: str) -> QuizAttempt | None:
+    return (
+        QuizAttempt.objects.filter(
+            user=user, topic=topic, quiz_type=quiz_type.upper(), answers__isnull=False
+        )
+        .order_by("-attempt_number")
+        .first()
+    )
+
+
+def quiz_attempt_payload(attempt: QuizAttempt) -> dict:
+    """Client view of an attempt. Answers and explanations stay hidden until it is submitted."""
+    payload = {
+        "id": attempt.id,
+        "status": attempt.status,
+        "quiz_type": attempt.quiz_type,
+        "attempt_number": attempt.attempt_number,
+        "questions": [
+            {"question": q["question"], "options": q["options"]}
+            for q in attempt.questions
+        ],
+        "total_points": attempt.total_points,
+        "answers": attempt.answers,
+        "score": attempt.score,
+        "passed": attempt.passed,
+        "submitted_at": attempt.submitted_at,
+        "results": None,
+        "correct_count": None,
+        "question_count": len(attempt.questions),
+    }
+    if attempt.answers is not None:
+        payload["results"] = [
+            {
+                "selected_index": a,
+                "correct_index": q["correct_index"],
+                "is_correct": a == q["correct_index"],
+                "explanation": q["explanation"],
+            }
+            for q, a in zip(attempt.questions, attempt.answers)
+        ]
+        payload["correct_count"] = sum(r["is_correct"] for r in payload["results"])
+    return payload
+
+
+QUIZ_STALE_AFTER = timedelta(minutes=15)
+
+
+def _check_quiz_allowed(user, topic, quiz_type: str) -> None:
     tp, _ = TopicProgress.objects.get_or_create(user=user, topic=topic)
 
     if quiz_type == QuizAttempt.QuizType.ADVANCED:
@@ -1450,6 +1510,98 @@ def generate_quiz(
     if available_at is not None:
         remaining = math.ceil((available_at - timezone.now()).total_seconds() / 60)
         raise ValueError(f"Please wait {remaining} minutes before retaking this quiz")
+
+
+def mark_quiz_failed(attempt_id: int) -> None:
+    from .events import publish_quiz_status
+
+    QuizAttempt.objects.filter(
+        id=attempt_id, status=QuizAttempt.Status.GENERATING
+    ).update(status=QuizAttempt.Status.FAILED)
+    publish_quiz_status(attempt_id)
+
+
+def _claim_for_retry(attempt_id: int) -> bool:
+    """Atomically take a FAILED or stale GENERATING attempt back to GENERATING."""
+    now = timezone.now()
+    return bool(
+        QuizAttempt.objects.filter(id=attempt_id)
+        .filter(
+            Q(status=QuizAttempt.Status.FAILED)
+            | Q(
+                status=QuizAttempt.Status.GENERATING,
+                generation_started_at__lt=now - QUIZ_STALE_AFTER,
+            )
+        )
+        .update(status=QuizAttempt.Status.GENERATING, generation_started_at=now)
+    )
+
+
+def request_quiz_generation(
+    user,
+    topic,
+    quiz_type: str,
+    prior_missed_questions: list[str] | None = None,
+) -> tuple[QuizAttempt, bool]:
+    """Start (or resume) the quiz for this user, topic and type.
+
+    Returns ``(attempt, started)``; ``started`` is True when this call queued a
+    generation (new attempt or retry). At most one unsubmitted attempt exists per
+    user, topic and type: an existing one is returned without any AI call, a
+    FAILED or stale one is re-queued on the same row, and concurrent callers
+    wait on a row lock and then get the winner's row. The task itself never claims.
+    """
+    from .tasks import generate_quiz_for_attempt
+
+    quiz_type = quiz_type.upper()
+    attempt = get_open_quiz_attempt(user, topic, quiz_type)
+    if attempt is None:
+        # The row lock serializes concurrent claims for this learner and topic, so
+        # the open-attempt check and the insert cannot interleave (a unique
+        # constraint alone would let a late caller take the next attempt number).
+        # No AI call happens inside this short transaction.
+        with transaction.atomic():
+            tp, _ = TopicProgress.objects.get_or_create(user=user, topic=topic)
+            TopicProgress.objects.select_for_update().get(pk=tp.pk)
+            attempt = get_open_quiz_attempt(user, topic, quiz_type)
+            if attempt is None:
+                _check_quiz_allowed(user, topic, quiz_type)
+                attempt = QuizAttempt.objects.create(
+                    user=user,
+                    topic=topic,
+                    quiz_type=quiz_type,
+                    attempt_number=_next_attempt_number(user, topic, quiz_type),
+                    questions=[],
+                    status=QuizAttempt.Status.GENERATING,
+                    generation_started_at=timezone.now(),
+                )
+                claimed = True
+            else:
+                claimed = False  # another request won while we waited for the lock
+    else:
+        claimed = _claim_for_retry(attempt.id)
+
+    if claimed:
+        try:
+            generate_quiz_for_attempt.delay(attempt.id, prior_missed_questions or [])
+        except BrokerOperationalError:
+            # Nothing will run; surface FAILED so the learner can retry.
+            mark_quiz_failed(attempt.id)
+    attempt.refresh_from_db()
+    return attempt, claimed
+
+
+def build_quiz(attempt_id: int, prior_missed_questions: list[str] | None = None) -> bool:
+    """Generate the questions for a GENERATING attempt. False when there was nothing to do.
+
+    The status check also makes a redelivered task a no-op, so the AI is not
+    called twice for the same attempt.
+    """
+    attempt = QuizAttempt.objects.select_related("topic__subject").get(id=attempt_id)
+    if attempt.status != QuizAttempt.Status.GENERATING:
+        return False
+    topic = attempt.topic
+    quiz_type = attempt.quiz_type
 
     schema = (
         NORMAL_QUIZ_SCHEMA
@@ -1504,23 +1656,23 @@ def generate_quiz(
             if attempt >= max_attempts - 1:
                 raise
 
-    attempt_number = _next_attempt_number(user, topic, quiz_type)
-
-    attempt_obj = QuizAttempt.objects.create(
-        user=user,
-        topic=topic,
-        quiz_type=quiz_type,
-        attempt_number=attempt_number,
-        questions=validated["questions"],
-        total_points=validated["total_points"],
+    # Filtering on GENERATING drops the result if the attempt was failed or re-claimed meanwhile.
+    return bool(
+        QuizAttempt.objects.filter(
+            id=attempt_id, status=QuizAttempt.Status.GENERATING
+        ).update(
+            questions=validated["questions"],
+            total_points=validated["total_points"],
+            status=QuizAttempt.Status.READY,
+        )
     )
-
-    return attempt_obj
 
 
 def submit_quiz(attempt_id: int, answers: list[int]) -> QuizAttempt:
     attempt = QuizAttempt.objects.select_related("topic", "user").get(id=attempt_id)
 
+    if attempt.status != QuizAttempt.Status.READY:
+        raise ValueError("Quiz is not ready")
     if attempt.answers is not None:
         raise ValueError("Quiz already submitted")
 
@@ -1542,7 +1694,8 @@ def submit_quiz(attempt_id: int, answers: list[int]) -> QuizAttempt:
     attempt.answers = answers
     attempt.score = earned_points
     attempt.passed = passed
-    attempt.save(update_fields=["answers", "score", "passed"])
+    attempt.submitted_at = timezone.now()
+    attempt.save(update_fields=["answers", "score", "passed", "submitted_at"])
 
     if attempt.quiz_type == QuizAttempt.QuizType.NORMAL:
         TopicProgress.objects.filter(user=attempt.user, topic=attempt.topic).update(
@@ -1568,6 +1721,7 @@ def submit_quiz(attempt_id: int, answers: list[int]) -> QuizAttempt:
                 tp.save(update_fields=["status", "completed_at"])
         else:
             tp.status = TopicProgress.Status.ADVANCED_PASSED
-            tp.save(update_fields=["status"])
+            tp.advanced_completed_at = timezone.now()
+            tp.save(update_fields=["status", "advanced_completed_at"])
 
     return attempt
