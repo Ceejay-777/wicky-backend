@@ -154,7 +154,9 @@ def resolve_or_create_subject(raw_input: str) -> ResolveResult | NarrowResult:
     candidates = _find_similar_subjects(query_vector)
 
     if not candidates:
-        llm_result = standardize_subject_name(raw_input)
+        llm_result = standardize_subject_name(
+            raw_input, context={"raw_input": raw_input}
+        ).data
 
         if not llm_result.get("is_specific", True):
             return NarrowResult(
@@ -166,7 +168,9 @@ def resolve_or_create_subject(raw_input: str) -> ResolveResult | NarrowResult:
         subject = _get_or_create_subject(standardized_name)
         return ResolveResult(action="resolve", subject=subject)
 
-    result = rank_or_resolve(raw_input, candidates)
+    result = rank_or_resolve(
+        raw_input, candidates, context={"raw_input": raw_input}
+    ).data
     action = result.get("action")
 
     if action == "resolve":
@@ -202,6 +206,10 @@ TOPIC_CONTENT_SYSTEM_INSTRUCTION = (
     "Every resource link should point to a real, publicly accessible resource that deepens "
     "understanding of the specific topic — not generic reference sites."
 )
+
+# Placeholder versions until pass 2 versions the topic and roadmap prompts.
+TOPIC_PROMPT_VERSION = "topic-v0"
+ROADMAP_PROMPT_VERSION = "roadmap-v0"
 
 TOPIC_CONTENT_SCHEMA = {
     "type": "object",
@@ -324,9 +332,11 @@ def generate_topic_content(topic_id: int) -> None:
             system_instruction=TOPIC_CONTENT_SYSTEM_INSTRUCTION,
             output_schema=TOPIC_CONTENT_SCHEMA,
             action="topic",
+            prompt_version=TOPIC_PROMPT_VERSION,
+            context={"topic_id": topic.id, "subject_id": topic.subject_id},
         )
         try:
-            validated = _validate_topic_content(response)
+            validated = _validate_topic_content(response.data)
             break
         except GenerationError:
             if attempt >= max_attempts - 1:
@@ -339,14 +349,19 @@ def generate_topic_content(topic_id: int) -> None:
 
 
 def review_topic_content(topic_id: int) -> bool:
+    """Raises ProviderError when every review step fails (an outage, not a verdict)."""
+    from apps.ai.calllog import annotate_outcome
     from apps.ai.services import review_content as ai_review
 
     topic = Topic.objects.get(id=topic_id)
     result = ai_review(
         content=topic.summary,
         criteria={"topic_title": topic.title, "subject_name": topic.subject.name},
+        context={"topic_id": topic.id, "subject_id": topic.subject_id},
     )
-    return result["overall_passed"]
+    passed = result.data["overall_passed"]
+    annotate_outcome(result.log_id, {"overall_passed": passed})
+    return passed
 
 
 def ensure_buffer_ahead(topic: Topic) -> None:
@@ -441,9 +456,11 @@ def generate_roadmap(subject: Subject, max_retries: int = 1) -> list[Topic]:
             system_instruction=ROADMAP_SYSTEM_INSTRUCTION,
             output_schema=ROADMAP_SCHEMA,
             action="roadmap",
+            prompt_version=ROADMAP_PROMPT_VERSION,
+            context={"subject_id": subject.id},
         )
         try:
-            validated = _validate_roadmap_response(response)
+            validated = _validate_roadmap_response(response.data)
             break
         except GenerationError:
             if attempt >= max_retries:
@@ -1642,20 +1659,21 @@ def build_quiz(attempt_id: int, prior_missed_questions: list[str] | None = None)
         f"{difficulty_note}{missed_context}"
     )
 
+    action = (
+        "quiz_advanced" if quiz_type == QuizAttempt.QuizType.ADVANCED else "quiz_normal"
+    )
     max_attempts = 2
     for attempt in range(max_attempts):
         response = generate_content(
             prompt=prompt,
             system_instruction=QUIZ_SYSTEM_INSTRUCTION,
             output_schema=schema,
-            action=(
-                "quiz_advanced"
-                if quiz_type == QuizAttempt.QuizType.ADVANCED
-                else "quiz_normal"
-            ),
+            action=action,
+            prompt_version=f"{action}-v0",
+            context={"quiz_attempt_id": attempt_id, "topic_id": topic.id},
         )
         try:
-            validated = _validate_quiz_response(response, quiz_type)
+            validated = _validate_quiz_response(response.data, quiz_type)
             break
         except (GenerationError, ProviderError):
             if attempt >= max_attempts - 1:

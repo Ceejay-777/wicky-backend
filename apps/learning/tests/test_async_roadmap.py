@@ -1,3 +1,4 @@
+from apps.ai.tests.helpers import ai_result
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -330,7 +331,7 @@ class TestResolveGetOrCreate:
     @patch("apps.learning.services.generate_embedding", return_value=[0.1] * 3072)
     def test_standardized_name_matching_existing_subject(self, _embed, _find, standardize):
         existing = Subject.objects.create(name="Python Programming")
-        standardize.return_value = {"is_specific": True, "standardized_name": "Python Programming"}
+        standardize.return_value = ai_result({"is_specific": True, "standardized_name": "Python Programming"})
         result = resolve_or_create_subject("python programing")
         assert result.action == "resolve"
         assert result.subject.id == existing.id
@@ -341,7 +342,7 @@ class TestResolveGetOrCreate:
     @patch("apps.learning.services.generate_embedding", return_value=[0.1] * 3072)
     def test_standardized_name_differing_only_by_case(self, _embed, _find, standardize):
         existing = Subject.objects.create(name="Python Programming")
-        standardize.return_value = {"is_specific": True, "standardized_name": "python programming"}
+        standardize.return_value = ai_result({"is_specific": True, "standardized_name": "python programming"})
         result = resolve_or_create_subject("pythn")
         assert result.subject.id == existing.id
         assert Subject.objects.count() == 1

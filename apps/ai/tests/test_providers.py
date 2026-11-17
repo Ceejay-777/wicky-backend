@@ -190,17 +190,6 @@ class TestSanitizeSchemaForGemini:
         schema = {"type": "object", "properties": {"minimum": {"type": "integer"}}}
         assert "minimum" in sanitize_schema_for_gemini(schema)["properties"]
 
-    def test_real_learning_schemas_are_gemini_safe(self):
-        from apps.ai.providers import sanitize_schema_for_gemini
-        from apps.learning.services import (
-            ADVANCED_QUIZ_SCHEMA,
-            NORMAL_QUIZ_SCHEMA,
-            ROADMAP_SCHEMA,
-            TOPIC_CONTENT_SCHEMA,
-        )
-        for schema in (ROADMAP_SCHEMA, NORMAL_QUIZ_SCHEMA, ADVANCED_QUIZ_SCHEMA, TOPIC_CONTENT_SCHEMA):
-            assert not (self._keys(sanitize_schema_for_gemini(schema)) & self.UNSUPPORTED)
-
     def test_call_gemini_native_sends_sanitized_schema(self):
         from apps.ai.providers import call_gemini_native
         schema = {"type": "array", "minItems": 1, "items": {"type": "string"}}

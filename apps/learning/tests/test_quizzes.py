@@ -1,3 +1,4 @@
+from apps.ai.tests.helpers import ai_result
 import pytest
 from datetime import timedelta
 from unittest.mock import patch
@@ -65,7 +66,7 @@ class TestGenerateQuiz:
 
     @patch("apps.learning.services.generate_content")
     def test_normal_quiz_creates_attempt(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         attempt = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         assert attempt.quiz_type == QuizAttempt.QuizType.NORMAL
         assert attempt.attempt_number == 1
@@ -76,7 +77,7 @@ class TestGenerateQuiz:
 
     @patch("apps.learning.services.generate_content")
     def test_advanced_quiz_creates_attempt(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(10, 200)
+        mock_gen.return_value = ai_result(_make_quiz_data(10, 200))
         TopicProgress.objects.create(
             user=user, topic=topic,
             status=TopicProgress.Status.PASSED,
@@ -120,7 +121,7 @@ class TestGenerateQuiz:
 
     @patch("apps.learning.services.generate_content")
     def test_attempt_number_increments(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         a1 = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         assert a1.attempt_number == 1
         submit_quiz(a1.id, [1] * 5)
@@ -132,7 +133,7 @@ class TestGenerateQuiz:
 
     @patch("apps.learning.services.generate_content")
     def test_attempt_number_independent_per_type(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         a1 = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         assert a1.attempt_number == 1
         QuizAttempt.objects.filter(id=a1.id).update(
@@ -142,13 +143,13 @@ class TestGenerateQuiz:
         tp.status = TopicProgress.Status.PASSED
         tp.resource_links_viewed_at = timezone.now()
         tp.save(update_fields=["status", "resource_links_viewed_at"])
-        mock_gen.return_value = _make_quiz_data(10, 200)
+        mock_gen.return_value = ai_result(_make_quiz_data(10, 200))
         a2 = generate_quiz(user, topic, QuizAttempt.QuizType.ADVANCED)
         assert a2.attempt_number == 1
 
     @patch("apps.learning.services.generate_content")
     def test_increments_normal_quiz_attempts_on_submit(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         a1 = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         tp = TopicProgress.objects.get(user=user, topic=topic)
         assert tp.normal_quiz_attempts == 0
@@ -163,7 +164,7 @@ class TestGenerateQuiz:
             status=TopicProgress.Status.PASSED,
             resource_links_viewed_at=timezone.now(),
         )
-        mock_gen.return_value = _make_quiz_data(10, 200)
+        mock_gen.return_value = ai_result(_make_quiz_data(10, 200))
         a1 = generate_quiz(user, topic, QuizAttempt.QuizType.ADVANCED)
         tp = TopicProgress.objects.get(user=user, topic=topic)
         assert tp.advanced_quiz_attempts == 0
@@ -173,7 +174,7 @@ class TestGenerateQuiz:
 
     @patch("apps.learning.services.generate_content")
     def test_retake_cooldown(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         a1 = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         submit_quiz(a1.id, [1] * 5)
         with pytest.raises(ValueError, match="Please wait 60 minutes"):
@@ -181,13 +182,13 @@ class TestGenerateQuiz:
 
     @patch("apps.learning.services.generate_content")
     def test_unsubmitted_attempt_does_not_start_cooldown(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         assert _quiz_available_at(user, topic, QuizAttempt.QuizType.NORMAL) is None
 
     @patch("apps.learning.services.generate_content")
     def test_retake_cooldown_expires(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         a1 = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         submit_quiz(a1.id, [1] * 5)
         QuizAttempt.objects.filter(user=user, topic=topic).update(
@@ -198,9 +199,9 @@ class TestGenerateQuiz:
 
     @patch("apps.learning.services.generate_content")
     def test_prior_missed_included_in_prompt(self, mock_gen, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         with patch("apps.learning.services.generate_content") as gen:
-            gen.return_value = _make_quiz_data(5, 100)
+            gen.return_value = ai_result(_make_quiz_data(5, 100))
             generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL,
                           prior_missed_questions=["What caused WW2?"])
             call_kwargs = gen.call_args[1]
@@ -209,8 +210,8 @@ class TestGenerateQuiz:
     @patch("apps.learning.services.generate_content")
     def test_malformed_retry_then_succeeds(self, mock_gen, user, topic):
         mock_gen.side_effect = [
-            {"questions": [], "total_points": 50},
-            _make_quiz_data(5, 100),
+            ai_result({"questions": [], "total_points": 50}),
+            ai_result(_make_quiz_data(5, 100)),
         ]
         attempt = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         assert len(attempt.questions) == 5
@@ -218,7 +219,7 @@ class TestGenerateQuiz:
 
     @patch("apps.learning.services.generate_content")
     def test_malformed_exhausted_marks_failed(self, mock_gen, user, topic):
-        mock_gen.return_value = {"questions": [], "total_points": 50}
+        mock_gen.return_value = ai_result({"questions": [], "total_points": 50})
         attempt = generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
         assert attempt.status == QuizAttempt.Status.FAILED
         assert mock_gen.call_count == 2
@@ -303,7 +304,7 @@ class TestSubmitQuiz:
         submit_quiz(attempt.id, self.VALID_ANSWERS)
         with pytest.raises(ValueError, match="Normal quiz already passed"):
             with patch("apps.learning.services.generate_content") as mock_gen:
-                mock_gen.return_value = _make_quiz_data(5, 100)
+                mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
                 generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
 
     def test_advanced_quiz_passed_does_not_allow_retake(self, user, topic):
@@ -409,7 +410,7 @@ class TestGenerateQuizTask:
     @patch("apps.learning.events.send_event")
     @patch("apps.learning.services.generate_content")
     def test_success_marks_ready_and_notifies_only_the_owner(self, mock_gen, mock_send, user, topic):
-        mock_gen.return_value = _make_quiz_data(5, 100)
+        mock_gen.return_value = ai_result(_make_quiz_data(5, 100))
         attempt = generate_quiz(user, topic, "NORMAL")
         assert attempt.status == QuizAttempt.Status.READY
         mock_send.assert_called_once()
@@ -473,7 +474,7 @@ class TestSubmitTimestamps:
             user=user, topic=topic, status=TopicProgress.Status.PASSED,
             resource_links_viewed_at=timezone.now(),
         )
-        mock_gen.return_value = _make_quiz_data(10, 200)
+        mock_gen.return_value = ai_result(_make_quiz_data(10, 200))
         a = generate_quiz(user, topic, QuizAttempt.QuizType.ADVANCED)
         assert a.submitted_at is None
         a = submit_quiz(a.id, [0] * 10)
@@ -558,7 +559,7 @@ class TestValidateQuizResponse:
 
     def test_prompt_contains_no_letter_label_instruction(self, user, topic):
         with patch("apps.learning.services.generate_content") as gen:
-            gen.return_value = _make_quiz_data(5, 100)
+            gen.return_value = ai_result(_make_quiz_data(5, 100))
             generate_quiz(user, topic, QuizAttempt.QuizType.NORMAL)
             prompt = gen.call_args[1]["prompt"]
             assert "labeled a/b/c/d" not in prompt

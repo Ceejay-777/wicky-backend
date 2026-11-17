@@ -8,6 +8,15 @@ Each builder returns a list[dict] ready for chat completions.
 import json
 
 # ---------------------------------------------------------------------------
+# Prompt versions for the prompts that live here. Bump when the text changes.
+# ---------------------------------------------------------------------------
+
+REVIEW_PROMPT_VERSION = "review-v0"
+RESOLVE_PROMPT_VERSION = "resolve-v0"
+STANDARDIZE_PROMPT_VERSION = "standardize-v0"
+
+
+# ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
 
@@ -55,29 +64,6 @@ REVIEW_SCHEMA = {
         "completeness",
         "overall_passed",
     ],
-}
-
-TOPIC_CONTENT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "summary": {"type": "string"},
-        "resource_links": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "url": {"type": "string"},
-                    "type": {
-                        "type": "string",
-                        "enum": ["article", "video", "book", "course", "podcast"],
-                    },
-                },
-                "required": ["title", "url", "type"],
-            },
-        },
-    },
-    "required": ["summary", "resource_links"],
 }
 
 RESOLVE_SCHEMA = {

@@ -20,7 +20,7 @@ Severity: **High** (security / data integrity) · **Medium** · **Low**
 `DEFAULT_THROTTLE_CLASSES` has only `AnonRateThrottle`, so the `'user': '100/hour'` rate is unused. Decide whether quiz generate (it spends AI tokens) needs its own scoped throttle.
 
 ## 3. Reviewer false rejections
-Primary reviewer `qwen/qwen3.8-27b` rejected known-good text 2 of 8 runs, both on "completeness". A rejection triggers regeneration (up to 2 attempts, then `FLAGGED`). Consider a softer completeness criterion or requiring two failing axes.
+Reviewer `qwen/qwen3.8-27b` (primary until the review chain was reordered to gpt-oss-120b first) rejected known-good text 2 of 8 runs, both on "completeness". A rejection triggers regeneration (up to 2 attempts, then `FLAGGED`). Consider a softer completeness criterion or requiring two failing axes.
 
 ## 4. Small issues
 - Dead AI-generated links and wrong link `type` labels (see F-1).

@@ -7,7 +7,6 @@ strategy. The rest of the codebase never constructs clients or response
 formats directly -- it goes through this module.
 """
 
-import json
 import logging
 import os
 from dataclasses import dataclass
@@ -45,7 +44,7 @@ PROVIDERS: dict[str, ProviderConfig] = {
         base_url="https://api.groq.com/openai/v1",
         api_key_env="GROQ_API_KEY",
         generate_models=["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"],
-        review_models=["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"],
+        review_models=["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
     ),
 }
 
@@ -185,8 +184,8 @@ def call_gemini_native(
     messages: list[dict],
     schema: dict,
     model: str = "gemini-3.8-flash",
-) -> dict:
-    """Call Gemini via native SDK. Works for generation, review, resolve, etc."""
+) -> str:
+    """Call Gemini via native SDK and return the raw reply text (unparsed JSON)."""
     import google.generativeai as genai
 
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
@@ -203,4 +202,4 @@ def call_gemini_native(
         ),
     )
     response = model_obj.generate_content(user_msg)
-    return json.loads(response.text)
+    return response.text

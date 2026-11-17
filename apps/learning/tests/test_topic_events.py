@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
 
 from datetime import timedelta
@@ -8,6 +9,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from apps.ai.exceptions import ProviderError
+from apps.ai.tests.helpers import ai_result
 from apps.learning.models import Subject, Topic, UserSubjectProgress
 from apps.learning.tasks import (
     cleanup_stuck_generations,
@@ -18,8 +20,8 @@ from apps.learning.tasks import (
 User = get_user_model()
 SEND = "apps.learning.events.send_event"
 REVIEW = "apps.ai.services.review_content"
-PASSED = {"overall_passed": True}
-FAILED = {"overall_passed": False}
+PASSED = ai_result({"overall_passed": True})
+FAILED = ai_result({"overall_passed": False})
 
 
 @pytest.fixture
@@ -110,6 +112,52 @@ class TestProviderDownOnLastRetry:
         topic.refresh_from_db()
         assert topic.content_status == "GENERATING"
         send.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestReviewOutage:
+    """A review outage is retried by Celery and never fails the topic."""
+
+    @pytest.fixture
+    def generating(self, topic):
+        Topic.objects.filter(id=topic.id).update(content_status="GENERATING")
+        return topic
+
+    @patch(SEND)
+    @patch(REVIEW, side_effect=ProviderError("down", provider="groq"))
+    def test_outage_triggers_a_celery_retry(self, _rev, send, generating):
+        task = review_content_for_topic
+        task.push_request(retries=0)
+        try:
+            with patch.object(task, "retry", side_effect=Retry()) as retry:
+                with pytest.raises(Retry):
+                    task(generating.id)
+        finally:
+            task.pop_request()
+        assert isinstance(retry.call_args.kwargs["exc"], ProviderError)
+        generating.refresh_from_db()
+        assert generating.content_status == "GENERATING"
+        send.assert_not_called()
+
+    @patch(SEND)
+    @patch("apps.learning.tasks.generate_content_for_topic.delay")
+    @patch(REVIEW, side_effect=ProviderError("down", provider="groq"))
+    def test_outage_at_retry_exhaustion_publishes_instead_of_failing(
+        self, _rev, gen_delay, send, generating
+    ):
+        task = review_content_for_topic
+        task.push_request(retries=task.max_retries)
+        try:
+            with pytest.raises(ProviderError):
+                task(generating.id)
+        finally:
+            task.pop_request()
+        generating.refresh_from_db()
+        assert generating.content_status == "READY"
+        assert generating.review_status == "PENDING"
+        assert generating.review_attempts == 0
+        gen_delay.assert_not_called()
+        assert send.call_args.args[2]["content_status"] == "READY"
 
 
 @pytest.mark.django_db

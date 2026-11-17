@@ -1,3 +1,4 @@
+from apps.ai.tests.helpers import ai_result
 import pytest
 from datetime import timedelta
 from unittest.mock import Mock, patch
@@ -277,13 +278,13 @@ class TestSendNotification:
         with patch("apps.learning.services.generate_content") as gen, patch(
             "apps.learning.tasks.review_content_for_topic.delay"
         ), patch.object(send_notification, "retry", side_effect=Retry()):
-            gen.return_value = {
+            gen.return_value = ai_result({
                 "summary": "A summary.",
                 "resource_links": [
                     {"title": "A", "url": "https://a.com", "type": "article"},
                     {"title": "B", "url": "https://b.com", "type": "video"},
                 ],
-            }
+            })
             with pytest.raises(Retry):  # review hasn't finished, so it retries
                 send_notification(usp.id)
 

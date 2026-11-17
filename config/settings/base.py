@@ -82,6 +82,14 @@ DATABASES = {
         'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
     }
 }
+# Same database, separate connection: AI call log rows commit on their own, so
+# a failed call is still recorded when the caller's transaction rolls back.
+DATABASES['ai_log'] = {**DATABASES['default'], 'TEST': {'MIRROR': 'default'}}
+DATABASE_ROUTERS = ['config.utils.db_routers.AILogRouter']
+
+# AI call log (apps.ai.models.AIGenerationLog)
+AI_LOG_RETENTION_DAYS = config('AI_LOG_RETENTION_DAYS', default=90, cast=int)
+AI_LOG_MAX_FIELD_BYTES = 100_000
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

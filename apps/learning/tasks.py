@@ -67,7 +67,17 @@ def review_content_for_topic(self, topic_id: int) -> None:
     from .services import request_topic_generation, review_topic_content
 
     topic = Topic.objects.get(id=topic_id)
-    passed = review_topic_content(topic_id)
+    try:
+        passed = review_topic_content(topic_id)
+    except ProviderError:
+        # An outage is not a verdict. On the last retry, publish the summary
+        # rather than failing the topic; review status stays as it was.
+        if self.request.retries >= self.max_retries:
+            Topic.objects.filter(id=topic_id).update(
+                content_status=Topic.ContentStatus.READY,
+            )
+            publish_topic_status(topic_id)
+        raise
 
     if passed:
         Topic.objects.filter(id=topic_id).update(

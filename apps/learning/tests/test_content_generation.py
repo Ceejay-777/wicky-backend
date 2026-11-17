@@ -1,3 +1,4 @@
+from apps.ai.tests.helpers import ai_result
 import pytest
 from unittest.mock import MagicMock
 from django.contrib.auth import get_user_model
@@ -133,13 +134,13 @@ class TestServicesContentGeneration:
 
     @patch("apps.learning.services.generate_content")
     def test_generate_saves_summary_and_links(self, mock_gen, topic):
-        mock_gen.return_value = {
+        mock_gen.return_value = ai_result({
             "summary": "A detailed summary about the causes of WW2.",
             "resource_links": [
                 {"title": "Article", "url": "https://example.com/a", "type": "article"},
                 {"title": "Video", "url": "https://example.com/v", "type": "video"},
             ],
-        }
+        })
         generate_topic_content(topic.id)
         topic.refresh_from_db()
         assert "causes of ww2" in topic.summary.lower()
@@ -148,11 +149,11 @@ class TestServicesContentGeneration:
     @patch("apps.learning.services.generate_content")
     def test_generate_malformed_retry_then_succeeds(self, mock_gen, topic):
         mock_gen.side_effect = [
-            {"summary": "x", "resource_links": []},
-            {"summary": "Valid summary.", "resource_links": [
+            ai_result({"summary": "x", "resource_links": []}),
+            ai_result({"summary": "Valid summary.", "resource_links": [
                 {"title": "A", "url": "https://a.com", "type": "article"},
                 {"title": "B", "url": "https://b.com", "type": "video"},
-            ]},
+            ]}),
         ]
         generate_topic_content(topic.id)
         topic.refresh_from_db()
@@ -161,7 +162,7 @@ class TestServicesContentGeneration:
 
     @patch("apps.learning.services.generate_content")
     def test_generate_malformed_exhausted_raises(self, mock_gen, topic):
-        mock_gen.return_value = {"summary": "x", "resource_links": []}
+        mock_gen.return_value = ai_result({"summary": "x", "resource_links": []})
         with pytest.raises(GenerationError):
             generate_topic_content(topic.id)
         assert mock_gen.call_count == 2
@@ -177,26 +178,26 @@ class TestServicesContentGeneration:
     @patch("apps.ai.services.review_content")
     def test_review_returns_true_when_passed(self, mock_review, topic):
         Topic.objects.filter(id=topic.id).update(summary="Some content.")
-        mock_review.return_value = {
+        mock_review.return_value = ai_result({
             "overall_passed": True,
             "accuracy": {"pass": True, "note": "OK"},
             "audience_fit": {"pass": True, "note": "OK"},
             "relevance": {"pass": True, "note": "OK"},
             "completeness": {"pass": True, "note": "OK"},
-        }
+        })
         result = review_topic_content(topic.id)
         assert result is True
 
     @patch("apps.ai.services.review_content")
     def test_review_returns_false_when_failed(self, mock_review, topic):
         Topic.objects.filter(id=topic.id).update(summary="Some content.")
-        mock_review.return_value = {
+        mock_review.return_value = ai_result({
             "overall_passed": False,
             "accuracy": {"pass": False, "note": "Inaccurate claim about dates"},
             "audience_fit": {"pass": True, "note": "OK"},
             "relevance": {"pass": True, "note": "OK"},
             "completeness": {"pass": True, "note": "OK"},
-        }
+        })
         result = review_topic_content(topic.id)
         assert result is False
 
@@ -221,13 +222,13 @@ class TestGenTask:
     @patch("apps.learning.tasks.review_content_for_topic.delay")
     @patch("apps.learning.services.generate_content")
     def test_gen_task_happy_path(self, mock_gen, mock_review_delay, topic):
-        mock_gen.return_value = {
+        mock_gen.return_value = ai_result({
             "summary": "A summary.",
             "resource_links": [
                 {"title": "A", "url": "https://a.com", "type": "article"},
                 {"title": "B", "url": "https://b.com", "type": "video"},
             ],
-        }
+        })
         generate_content_for_topic(topic.id)
         topic.refresh_from_db()
         assert topic.summary == "A summary."
@@ -255,7 +256,7 @@ class TestGenTask:
     @patch("apps.learning.tasks.review_content_for_topic.delay")
     @patch("apps.learning.services.generate_content")
     def test_gen_task_marks_failed_on_malformed_exhausted(self, mock_gen, mock_review_delay, topic):
-        mock_gen.return_value = {"summary": "x", "resource_links": []}
+        mock_gen.return_value = ai_result({"summary": "x", "resource_links": []})
         generate_content_for_topic(topic.id)
         topic.refresh_from_db()
         assert topic.content_status == Topic.ContentStatus.FAILED
@@ -289,13 +290,13 @@ class TestReviewTask:
 
     @patch("apps.ai.services.review_content")
     def test_review_task_passes(self, mock_review, topic):
-        mock_review.return_value = {
+        mock_review.return_value = ai_result({
             "overall_passed": True,
             "accuracy": {"pass": True, "note": "OK"},
             "audience_fit": {"pass": True, "note": "OK"},
             "relevance": {"pass": True, "note": "OK"},
             "completeness": {"pass": True, "note": "OK"},
-        }
+        })
         review_content_for_topic(topic.id)
         topic.refresh_from_db()
         assert topic.content_status == Topic.ContentStatus.READY
@@ -304,13 +305,13 @@ class TestReviewTask:
     @patch("apps.learning.tasks.generate_content_for_topic.delay")
     @patch("apps.ai.services.review_content")
     def test_review_task_fails_then_retries(self, mock_review, mock_gen_delay, topic):
-        mock_review.return_value = {
+        mock_review.return_value = ai_result({
             "overall_passed": False,
             "accuracy": {"pass": False, "note": "Inaccurate"},
             "audience_fit": {"pass": True, "note": "OK"},
             "relevance": {"pass": True, "note": "OK"},
             "completeness": {"pass": True, "note": "OK"},
-        }
+        })
         review_content_for_topic(topic.id)
         topic.refresh_from_db()
         # Re-claimed for the regeneration task that was just queued.
@@ -322,13 +323,13 @@ class TestReviewTask:
     @patch("apps.ai.services.review_content")
     def test_review_task_fails_permanently(self, mock_review, mock_gen_delay, topic):
         Topic.objects.filter(id=topic.id).update(review_attempts=1)
-        mock_review.return_value = {
+        mock_review.return_value = ai_result({
             "overall_passed": False,
             "accuracy": {"pass": False, "note": "Inaccurate"},
             "audience_fit": {"pass": True, "note": "OK"},
             "relevance": {"pass": True, "note": "OK"},
             "completeness": {"pass": True, "note": "OK"},
-        }
+        })
         review_content_for_topic(topic.id)
         topic.refresh_from_db()
         assert topic.content_status == Topic.ContentStatus.FAILED
@@ -536,125 +537,6 @@ class TestCleanupStuck:
         assert topic.content_status == Topic.ContentStatus.FAILED
 
 
-from unittest.mock import MagicMock, patch as mock_patch
-
-
-@pytest.mark.django_db
-class TestAIReviewContent:
-
-    @mock_patch("apps.ai.services._call_with_fallback")
-    def test_review_calls_groq_and_returns_result(self, mock_fallback):
-        from apps.ai.services import review_content
-        mock_fallback.return_value = {
-            "accuracy": {"pass": True, "note": "OK"},
-            "audience_fit": {"pass": True, "note": "OK"},
-            "relevance": {"pass": True, "note": "OK"},
-            "completeness": {"pass": True, "note": "OK"},
-            "overall_passed": True,
-        }
-        result = review_content("Some content", criteria={"topic_title": "Test", "subject_name": "Test"})
-        assert result["overall_passed"] is True
-        assert result["accuracy"]["pass"] is True
-
-    @mock_patch("apps.ai.services._call_with_fallback")
-    def test_review_flags_for_manual_review_on_all_providers_fail(self, mock_fallback):
-        from apps.ai.exceptions import ProviderError
-        from apps.ai.services import review_content
-        mock_fallback.side_effect = ProviderError("All failed", provider="groq")
-        result = review_content("Some content")
-        assert result["overall_passed"] is False
-        assert "all providers failed" in result["accuracy"]["note"].lower()
-
-    @mock_patch("apps.ai.services._call_with_fallback")
-    def test_review_retries_a_malformed_reply_once(self, mock_fallback):
-        from apps.ai.services import review_content
-        good = {
-            "accuracy": {"pass": True, "note": "OK"},
-            "audience_fit": {"pass": True, "note": "OK"},
-            "relevance": {"pass": True, "note": "OK"},
-            "completeness": {"pass": True, "note": "OK"},
-            "overall_passed": True,
-        }
-        mock_fallback.side_effect = [{"accuracy": {"pass": True, "note": "OK"}}, good]
-        assert review_content("Some content")["overall_passed"] is True
-        assert mock_fallback.call_count == 2
-
-    @mock_patch("apps.ai.services._call_with_fallback")
-    def test_review_flags_instead_of_raising_when_reply_stays_malformed(self, mock_fallback):
-        from apps.ai.services import review_content
-        mock_fallback.return_value = {"nonsense": True}
-        result = review_content("Some content")
-        assert result["overall_passed"] is False
-        assert mock_fallback.call_count == 2
-
-
-@pytest.mark.django_db
-class TestAIGenerateContent:
-
-    @patch("apps.ai.services._call_with_fallback")
-    def test_generate_calls_provider_and_returns_dict(self, mock_fallback):
-        from apps.ai.services import generate_content
-        mock_fallback.return_value = {
-            "summary": "A test summary.",
-            "resource_links": [
-                {"title": "Article", "url": "https://a.com", "type": "article"},
-                {"title": "Video", "url": "https://v.com", "type": "video"},
-            ],
-        }
-        result = generate_content("prompt", output_schema={"type": "object"})
-        assert "summary" in result
-        mock_fallback.assert_called_once()
-
-    @patch("apps.ai.services._call_with_fallback")
-    def test_generate_uses_system_instruction(self, mock_fallback):
-        from apps.ai.services import generate_content
-        mock_fallback.return_value = {
-            "summary": "A test summary.",
-            "resource_links": [
-                {"title": "Article", "url": "https://a.com", "type": "article"},
-                {"title": "Video", "url": "https://v.com", "type": "video"},
-            ],
-        }
-        generate_content("user prompt", system_instruction="be helpful")
-        # _call_with_fallback(role, messages, schema, schema_name)
-        messages = mock_fallback.call_args[0][1]
-        assert messages[0] == {"role": "system", "content": "be helpful"}
-        assert messages[1]["role"] == "user"
-        assert "user prompt" in messages[1]["content"]
-
-    @patch("apps.ai.services._call_with_fallback")
-    def test_generate_raises_provider_error_on_api_failure(self, mock_fallback):
-        from apps.ai.exceptions import ProviderError
-        from apps.ai.services import generate_content
-        mock_fallback.side_effect = ProviderError("rate limited", provider="groq")
-        with pytest.raises(ProviderError, match="rate limited"):
-            generate_content("prompt")
-
-    @patch("apps.ai.services._call_with_fallback")
-    def test_standardize_subject_name_calls_generate_content(self, mock_fallback):
-        from apps.ai.services import standardize_subject_name
-        mock_fallback.return_value = {
-            "standardized_name": "World War II",
-            "is_specific": True,
-        }
-        result = standardize_subject_name("ww2")
-        assert result["standardized_name"] == "World War II"
-        assert result["is_specific"] is True
-
-    @patch("apps.ai.services._call_with_fallback")
-    def test_standardize_subject_name_flags_broad_input(self, mock_fallback):
-        from apps.ai.services import standardize_subject_name
-        mock_fallback.return_value = {
-            "standardized_name": "History",
-            "is_specific": False,
-            "suggestion": "Try: World War II, French Revolution",
-        }
-        result = standardize_subject_name("History")
-        assert result["is_specific"] is False
-        assert "suggestion" in result
-        assert "World War II" in result["suggestion"]
-
-
 class TestIsRetryableError:
     """Locks the contract: httpx errors are retryable, others are not."""
 
@@ -687,3 +569,36 @@ class TestIsRetryableError:
         from apps.ai.services import _is_retryable_error
         assert not _is_retryable_error(ValueError("something broke"))
         assert not _is_retryable_error(Exception("rate limit exceeded"))
+
+
+class TestLearningSchemasAreGeminiSafe:
+    """Moved from apps/ai tests: apps.ai must not import apps.learning."""
+
+    UNSUPPORTED = {"minItems", "maxItems", "minimum", "maximum", "additionalProperties"}
+
+    @classmethod
+    def _keys(cls, node):
+        found = set()
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k == "properties":
+                    for sub in v.values():
+                        found |= cls._keys(sub)
+                else:
+                    found.add(k)
+                    found |= cls._keys(v)
+        elif isinstance(node, list):
+            for v in node:
+                found |= cls._keys(v)
+        return found
+
+    def test_real_learning_schemas_are_gemini_safe(self):
+        from apps.ai.providers import sanitize_schema_for_gemini
+        from apps.learning.services import (
+            ADVANCED_QUIZ_SCHEMA,
+            NORMAL_QUIZ_SCHEMA,
+            ROADMAP_SCHEMA,
+            TOPIC_CONTENT_SCHEMA,
+        )
+        for schema in (ROADMAP_SCHEMA, NORMAL_QUIZ_SCHEMA, ADVANCED_QUIZ_SCHEMA, TOPIC_CONTENT_SCHEMA):
+            assert not (self._keys(sanitize_schema_for_gemini(schema)) & self.UNSUPPORTED)

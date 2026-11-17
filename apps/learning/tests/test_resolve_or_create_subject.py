@@ -1,3 +1,4 @@
+from apps.ai.tests.helpers import ai_result
 from unittest.mock import patch
 import pytest
 from apps.ai.exceptions import ProviderError
@@ -30,11 +31,11 @@ class TestResolveOrCreateViaSimilarity:
         mock_embed.return_value = [0.1] * 3072
         mock_find.return_value = [{"id": "1", "name": "World War II", "similarity_score": 0.95}]
         existing = Subject.objects.create(name="World War II")
-        mock_resolve.return_value = {
+        mock_resolve.return_value = ai_result({
             "action": "resolve",
             "subject_id": str(existing.id),
             "standardized_name": "World War II",
-        }
+        })
         result = resolve_or_create_subject("WW2")
         assert result.action == "resolve"
         assert result.subject.id == existing.id
@@ -46,10 +47,10 @@ class TestResolveOrCreateViaSimilarity:
         mock_embed.return_value = [0.1] * 3072
         mock_find.return_value = [{"id": "1", "name": "History", "similarity_score": 0.5}]
         Subject.objects.create(name="History")
-        mock_resolve.return_value = {
+        mock_resolve.return_value = ai_result({
             "action": "create",
             "standardized_name": "Pacific Theater WW2",
-        }
+        })
         result = resolve_or_create_subject("Pacific Theater")
         assert result.action == "resolve"
         assert result.subject.name == "Pacific Theater WW2"
@@ -62,10 +63,10 @@ class TestResolveOrCreateViaSimilarity:
         mock_embed.return_value = [0.1] * 3072
         mock_find.return_value = [{"id": "1", "name": "World War II", "similarity_score": 0.4}]
         Subject.objects.create(name="World War II")
-        mock_resolve.return_value = {
+        mock_resolve.return_value = ai_result({
             "action": "narrow",
             "suggestion": "Which aspect of History? Try: WW2, French Revolution",
-        }
+        })
         result = resolve_or_create_subject("History")
         assert result.action == "narrow"
         assert "WW2" in result.suggestion
@@ -78,7 +79,7 @@ class TestResolveOrCreateViaSimilarity:
         mock_embed.return_value = [0.1] * 3072
         mock_find.return_value = [{"id": "1", "name": "World War II", "similarity_score": 0.5}]
         Subject.objects.create(name="World War II")
-        mock_resolve.return_value = {"action": "unknown"}
+        mock_resolve.return_value = ai_result({"action": "unknown"})
         with pytest.raises(GenerationError):
             resolve_or_create_subject("Something")
 
@@ -92,7 +93,7 @@ class TestResolveOrCreateViaSimilarity:
         mock_embed.return_value = [0.1] * 3072
         mock_find.return_value = [{"id": "1", "name": "History", "similarity_score": 0.3}]
         Subject.objects.create(name="History")
-        mock_resolve.return_value = {"action": "create", "standardized_name": "World War II"}
+        mock_resolve.return_value = ai_result({"action": "create", "standardized_name": "World War II"})
         mock_compute.side_effect = ProviderError("API down", provider="gemini")
         with pytest.raises(ProviderError):
             resolve_or_create_subject("WW2")
@@ -107,10 +108,10 @@ class TestResolveOrCreateEmptyDatabase:
     @patch("apps.learning.services.generate_embedding")
     def test_creates_with_standardized_name(self, mock_embed, mock_std_name, mock_compute):
         mock_embed.return_value = [0.1] * 3072
-        mock_std_name.return_value = {
+        mock_std_name.return_value = ai_result({
             "standardized_name": "World War II",
             "is_specific": True,
-        }
+        })
         result = resolve_or_create_subject("ww2")
         assert result.action == "resolve"
         assert result.subject.name == "World War II"
@@ -120,11 +121,11 @@ class TestResolveOrCreateEmptyDatabase:
     @patch("apps.learning.services.generate_embedding")
     def test_narrows_broad_input(self, mock_embed, mock_canon_name):
         mock_embed.return_value = [0.1] * 3072
-        mock_canon_name.return_value = {
+        mock_canon_name.return_value = ai_result({
             "standardized_name": "History",
             "is_specific": False,
             "suggestion": "Try: World War II, French Revolution, or Ancient Rome",
-        }
+        })
         result = resolve_or_create_subject("History")
         assert result.action == "narrow"
         assert "World War II" in result.suggestion
@@ -137,10 +138,10 @@ class TestResolveOrCreateEmptyDatabase:
         self, mock_embed, mock_canon_name, mock_compute
     ):
         mock_embed.return_value = [0.1] * 3072
-        mock_canon_name.return_value = {
+        mock_canon_name.return_value = ai_result({
             "standardized_name": "World War II",
             "is_specific": True,
-        }
+        })
         mock_compute.side_effect = ProviderError("API down", provider="gemini")
         with pytest.raises(ProviderError):
             resolve_or_create_subject("ww2")

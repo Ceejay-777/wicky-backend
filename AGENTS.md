@@ -42,7 +42,10 @@ python manage.py seed_subjects | seed_demo   # seed data; see docs/reference/liv
 ## AI calls
 
 - Always pass `action=` to `generate_content()`. Each action has its own chain and token ceiling (`_ACTION_CHAINS`, `_MAX_COMPLETION_TOKENS`). Every Groq request sets `max_completion_tokens` and `reasoning_effort`; `finish_reason == "length"` is an error that moves the chain on.
-- Review failures return a flagged result instead of raising.
+- Every action, review included, raises `ProviderError` when its whole chain fails. A malformed or wrongly shaped reply fails that step and the chain moves on.
+- Every AI call needs a `prompt_version` and a JSON-safe `context` (topic id, subject id, quiz attempt id); neither has a default. Public functions return an `AIResult` (`data` plus call metadata and `log_id`).
+- Every chain step is logged to `AIGenerationLog` by the dispatcher; never log AI calls by hand. Attach a caller's verdict with `apps.ai.calllog.annotate_outcome(log_id, ...)`. See `docs/reference/ai-providers.md`, Call log.
+- `apps/ai` never imports from `apps/learning` (a test enforces it).
 - AI calls cost money: never add a path that can call the LLM twice for the same request.
 
 ## Generation flows (do not bypass)
@@ -63,6 +66,8 @@ python manage.py seed_subjects | seed_demo   # seed data; see docs/reference/liv
 
 - `CELERY_TASK_ALWAYS_EAGER = True`: tasks run synchronously. Throttling is off. Password hasher is MD5.
 - `MIGRATION_MODULES = {'ai': None}`: the `ai` app has no migrations in tests.
+- `AIGenerationLog` lives on the `ai_log` database alias (a separate in-memory DB in tests). Tests that write or read it need `@pytest.mark.django_db(databases=["default", "ai_log"])`. Mock public AI functions with `apps.ai.tests.helpers.ai_result(data)`.
+- Test settings use plain `StaticFilesStorage`, so admin pages render without `collectstatic`.
 - pgvector queries check `connection.vendor != "postgresql"` first, so they no-op on SQLite.
 - Auth fixtures: `APIClient()` plus `RefreshToken.for_user(user)`; set `client.cookies["access_token"]` by hand.
 

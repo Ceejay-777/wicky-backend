@@ -1,3 +1,4 @@
+from apps.ai.tests.helpers import ai_result
 from unittest.mock import patch
 import pytest
 from apps.learning.models import Subject, Topic
@@ -18,7 +19,7 @@ class TestGenerateRoadmap:
 
     @patch("apps.learning.services.generate_content")
     def test_generates_20_topics(self, mock_generate):
-        mock_generate.return_value = self.VALID
+        mock_generate.return_value = ai_result(self.VALID)
         topics = generate_roadmap(self._subject())
         assert len(topics) == 20
         for i, t in enumerate(topics):
@@ -35,20 +36,20 @@ class TestGenerateRoadmap:
                 for i in range(1, 26)
             ],
         }
-        mock_generate.return_value = data
+        mock_generate.return_value = ai_result(data)
         topics = generate_roadmap(self._subject())
         assert len(topics) == 25
 
     @patch("apps.learning.services.generate_content")
     def test_retries_on_failure_then_succeeds(self, mock_generate):
-        mock_generate.side_effect = [{"topics": []}, self.VALID]
+        mock_generate.side_effect = [ai_result({"topics": []}), ai_result(self.VALID)]
         topics = generate_roadmap(self._subject())
         assert len(topics) == 20
         assert mock_generate.call_count == 2
 
     @patch("apps.learning.services.generate_content")
     def test_repeated_failure_raises_error(self, mock_generate):
-        mock_generate.return_value = {"topics": []}
+        mock_generate.return_value = ai_result({"topics": []})
         with pytest.raises(GenerationError):
             generate_roadmap(self._subject())
         assert mock_generate.call_count == 2

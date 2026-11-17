@@ -1,175 +1,322 @@
+import json
+from unittest.mock import patch
+
+import httpx
 import pytest
-from unittest.mock import MagicMock, patch
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.test import override_settings
 
-from apps.ai.services import _validate_shape, _is_retryable_error
-from apps.ai.exceptions import ProviderError
-from apps.ai.prompts import REVIEW_SCHEMA, TOPIC_CONTENT_SCHEMA
-from apps.ai.providers import PROVIDERS
+from apps.ai.calllog import annotate_outcome
+from apps.ai.exceptions import ProviderError, ResponseShapeError
+from apps.ai.models import AIGenerationLog
+from apps.ai.prompts import REVIEW_SCHEMA
+from apps.ai.services import (
+    _ACTION_CHAINS,
+    _MAX_COMPLETION_TOKENS,
+    _is_retryable_error,
+    _validate_shape,
+    generate_content,
+    review_content,
+    standardize_subject_name,
+)
 
+LOG_DB = pytest.mark.django_db(databases=["default", "ai_log"])
 
-class TestValidateShape:
-    def test_passes_valid_data(self):
-        data = {
-            "accuracy": {"pass": True, "note": "OK"},
-            "audience_fit": {"pass": True, "note": "OK"},
-            "relevance": {"pass": True, "note": "OK"},
-            "completeness": {"pass": True, "note": "OK"},
-            "overall_passed": True,
-        }
-        _validate_shape(data, REVIEW_SCHEMA)  # should not raise
-
-    def test_fails_on_missing_key(self):
-        data = {
-            "accuracy": {"pass": True, "note": "OK"},
-            # missing audience_fit, relevance, completeness, overall_passed
-        }
-        from apps.learning.exceptions import GenerationError
-        with pytest.raises(GenerationError, match="Missing required key"):
-            _validate_shape(data, REVIEW_SCHEMA)
-
-    def test_fails_on_wrong_type_string(self):
-        data = {
-            "accuracy": {"pass": "yes", "note": "OK"},  # pass should be bool
-            "audience_fit": {"pass": True, "note": "OK"},
-            "relevance": {"pass": True, "note": "OK"},
-            "completeness": {"pass": True, "note": "OK"},
-            "overall_passed": True,
-        }
-        from apps.learning.exceptions import GenerationError
-        with pytest.raises(GenerationError, match="expected boolean"):
-            _validate_shape(data, REVIEW_SCHEMA)
-
-    def test_fails_on_non_object_top_level(self):
-        from apps.learning.exceptions import GenerationError
-        with pytest.raises(GenerationError, match="Expected object"):
-            _validate_shape("not a dict", REVIEW_SCHEMA)
-
-    def test_validates_nested_objects(self):
-        data = {
-            "summary": "A summary",
-            "resource_links": [
-                {"title": "T", "url": "http://x.com"},  # missing 'type' key
-            ],
-        }
-        from apps.learning.exceptions import GenerationError
-        with pytest.raises(GenerationError, match="Missing required key"):
-            _validate_shape(data, TOPIC_CONTENT_SCHEMA)
-
-    def test_topic_content_valid_data(self):
-        data = {
-            "summary": "A detailed summary about quantum physics.",
-            "resource_links": [
-                {"title": "Wikipedia", "url": "https://en.wikipedia.org/wiki/QM", "type": "article"},
-                {"title": "Video", "url": "https://youtube.com/watch?v=xyz", "type": "video"},
-            ],
-        }
-        _validate_shape(data, TOPIC_CONTENT_SCHEMA)  # should not raise
-
-    def test_topic_content_missing_summary(self):
-        data = {
-            "resource_links": [
-                {"title": "A", "url": "http://a.com", "type": "article"},
-                {"title": "B", "url": "http://b.com", "type": "video"},
-            ],
-        }
-        from apps.learning.exceptions import GenerationError
-        with pytest.raises(GenerationError, match="Missing required key: summary"):
-            _validate_shape(data, TOPIC_CONTENT_SCHEMA)
+SCHEMA = {
+    "type": "object",
+    "properties": {"answer": {"type": "string"}},
+    "required": ["answer"],
+}
+GOOD = {"answer": "42"}
+REVIEW_OK = {
+    "accuracy": {"pass": True, "note": "OK"},
+    "audience_fit": {"pass": True, "note": "OK"},
+    "relevance": {"pass": True, "note": "OK"},
+    "completeness": {"pass": True, "note": "OK"},
+    "overall_passed": True,
+}
+USAGE = {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
 
 
-class TestIsRetryableError:
-    def test_provider_error_is_not_retryable(self):
-        exc = ProviderError("test", provider="groq", recoverable=True)
-        # ProviderError is not a known SDK exception class
-        assert _is_retryable_error(exc) is False
-
-    def test_non_retryable_returns_false(self):
-        assert _is_retryable_error(ValueError("nope")) is False
-
-
-class TestCallProvider:
-    """Test the provider dispatch function."""
-
-    @patch("apps.ai.services.call_gemini_native")
-    def test_gemini_routes_to_native_sdk(self, mock_gemini):
-        from apps.ai.services import _call_provider
-        mock_gemini.return_value = {"result": "ok"}
-        result = _call_provider("gemini", "gemini-3.8-flash", [{"role": "user", "content": "hi"}], {})
-        mock_gemini.assert_called_once()
-        assert result == {"result": "ok"}
-
-    @patch("apps.ai.services._call_openai_compatible")
-    def test_groq_routes_to_openai_compatible(self, mock_openai):
-        from apps.ai.services import _call_provider
-        mock_openai.return_value = {"result": "ok"}
-        result = _call_provider("groq", "openai/gpt-oss-120b", [{"role": "user", "content": "hi"}], {})
-        mock_openai.assert_called_once()
-        assert result == {"result": "ok"}
-
-    def test_unknown_provider_raises(self):
-        from apps.ai.services import _call_provider
-        with pytest.raises(ValueError, match="Unknown provider"):
-            _call_provider("unknown", "model", [], {})
-
-
-class TestReviewContent:
-    """Test the review_content public API."""
-
-    @patch("apps.ai.services._call_with_fallback")
-    def test_returns_result_on_success(self, mock_fallback):
-        from apps.ai.services import review_content
-        mock_fallback.return_value = {
-            "accuracy": {"pass": True, "note": "OK"},
-            "audience_fit": {"pass": True, "note": "OK"},
-            "relevance": {"pass": True, "note": "OK"},
-            "completeness": {"pass": True, "note": "OK"},
-            "overall_passed": True,
-        }
-        result = review_content("Some content")
-        assert result["overall_passed"] is True
-
-    @patch("apps.ai.services._call_with_fallback")
-    def test_flags_for_manual_review_on_provider_failure(self, mock_fallback):
-        from apps.ai.services import review_content
-        mock_fallback.side_effect = ProviderError("All failed", provider="groq")
-        result = review_content("Some content")
-        assert result["overall_passed"] is False
-        assert "all providers failed" in result["accuracy"]["note"].lower()
-
-
-class TestGenerateContent:
-    """generate_content must honor the caller's output_schema."""
-
-    ROADMAP_LIKE = {
-        "type": "object",
-        "properties": {"topics": {"type": "array", "items": {"type": "object"}}},
-        "required": ["topics"],
+def reply(content, finish="stop", status=200):
+    """A real httpx response shaped like a Groq chat completion."""
+    if not isinstance(content, str):
+        content = json.dumps(content)
+    body = {
+        "choices": [{"finish_reason": finish, "message": {"content": content}}],
+        "usage": USAGE,
     }
+    return httpx.Response(
+        status, json=body, request=httpx.Request("POST", "https://groq.test/chat/completions")
+    )
 
-    @patch("apps.ai.services._call_with_fallback")
-    def test_passes_caller_schema_to_provider(self, mock_fallback):
-        from apps.ai.services import generate_content
-        mock_fallback.return_value = {"topics": []}
-        generate_content("p", output_schema=self.ROADMAP_LIKE)
-        _, _, schema, _ = mock_fallback.call_args.args
-        assert schema is self.ROADMAP_LIKE
 
-    @patch("apps.ai.services._call_with_fallback")
-    def test_validates_against_caller_schema(self, mock_fallback):
-        from apps.ai.services import generate_content
-        from apps.learning.exceptions import GenerationError
-        # A topic-content-shaped response is wrong for a roadmap schema.
-        mock_fallback.return_value = {"summary": "s", "resource_links": []}
-        with pytest.raises(GenerationError):
-            generate_content("p", output_schema=self.ROADMAP_LIKE)
+class FakeClient:
+    """Stands in for the provider's httpx client: the HTTP boundary."""
 
-    @patch("apps.ai.services._call_with_fallback")
-    def test_defaults_to_topic_content_schema(self, mock_fallback):
-        from apps.ai.prompts import TOPIC_CONTENT_SCHEMA
-        from apps.ai.services import generate_content
-        mock_fallback.return_value = {"summary": "s", "resource_links": []}
-        generate_content("p")
-        assert mock_fallback.call_args.args[2] is TOPIC_CONTENT_SCHEMA
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.payloads = []
+
+    def post(self, path, json):
+        self.payloads.append(json)
+        r = self.replies.pop(0)
+        if isinstance(r, Exception):
+            raise r
+        return r
+
+
+def fake_groq(*replies):
+    client = FakeClient(replies)
+    return patch("apps.ai.services.get_client", return_value=client), client
+
+
+def generate(**overrides):
+    kwargs = {
+        "prompt": "What is the answer?",
+        "system_instruction": "Be brief.",
+        "output_schema": SCHEMA,
+        "action": "topic",
+        "prompt_version": "test-v1",
+        "context": {"topic_id": 7, "subject_id": 3},
+    }
+    return generate_content(**{**kwargs, **overrides})
+
+
+def rows():
+    return list(AIGenerationLog.objects.order_by("id"))
+
+
+# ---------------------------------------------------------------------------
+# Dispatcher and results
+# ---------------------------------------------------------------------------
+
+
+@LOG_DB
+class TestDispatcher:
+    def test_first_step_success_returns_typed_result(self):
+        patcher, _ = fake_groq(reply(GOOD))
+        with patcher:
+            result = generate()
+        assert result.data == GOOD
+        assert result.provider == "groq"
+        assert result.model == "openai/gpt-oss-120b"
+        assert result.steps_tried == 1
+        assert result.latency_ms >= 0
+        assert result.log_id == rows()[0].id
+
+    def test_http_error_falls_through_to_second_step(self):
+        patcher, _ = fake_groq(reply({}, status=503), reply(GOOD))
+        with patcher:
+            result = generate()
+        assert result.steps_tried == 2
+        assert result.model == "qwen/qwen3.8-27b"
+        first, second = rows()
+        assert (first.outcome, first.served, first.step_position) == ("http_error", False, 0)
+        assert (second.outcome, second.served, second.step_position) == ("success", True, 1)
+        assert result.log_id == second.id
+
+    def test_timeout_is_logged_as_timeout(self):
+        patcher, _ = fake_groq(httpx.ReadTimeout("slow"), reply(GOOD))
+        with patcher:
+            generate()
+        assert rows()[0].outcome == "timeout"
+
+    def test_truncated_reply_is_logged_and_chain_moves_on(self):
+        patcher, _ = fake_groq(reply('{"answer": "4', finish="length"), reply(GOOD))
+        with patcher:
+            result = generate()
+        assert result.steps_tried == 2
+        first = rows()[0]
+        assert first.outcome == "truncated"
+        assert first.raw_response == '{"answer": "4'
+
+    def test_invalid_json_is_logged_and_chain_moves_on(self):
+        patcher, _ = fake_groq(reply("not json at all"), reply(GOOD))
+        with patcher:
+            result = generate()
+        assert result.steps_tried == 2
+        assert rows()[0].outcome == "malformed_json"
+        assert rows()[0].raw_response == "not json at all"
+
+    def test_wrong_shape_is_logged_and_chain_moves_on(self):
+        patcher, _ = fake_groq(reply({"other": 1}), reply(GOOD))
+        with patcher:
+            result = generate()
+        assert result.data == GOOD
+        assert rows()[0].outcome == "shape_invalid"
+
+    def test_every_step_failing_raises_provider_error(self):
+        patcher, _ = fake_groq(*[reply({}, status=500)] * 3)
+        with patcher, pytest.raises(ProviderError, match="All providers failed for topic"):
+            generate()
+        logged = rows()
+        assert [r.outcome for r in logged] == ["http_error"] * 3
+        assert [r.step_position for r in logged] == [0, 1, 2]
+        assert not any(r.served for r in logged)
+
+    def test_passes_effort_and_token_cap_for_each_step(self):
+        patcher, client = fake_groq(reply(GOOD))
+        with patcher:
+            generate(action="quiz_normal")
+        payload = client.payloads[0]
+        assert payload["model"] == "openai/gpt-oss-120b"
+        assert payload["reasoning_effort"] == "low"
+        assert payload["max_completion_tokens"] == 8192
+
+    def test_qwen_step_omits_reasoning_effort(self):
+        patcher, client = fake_groq(reply({}, status=503), reply(GOOD))
+        with patcher:
+            generate(action="roadmap")
+        assert "reasoning_effort" not in client.payloads[1]
+
+    def test_unknown_action_is_rejected(self):
+        with pytest.raises(ValueError, match="Unknown AI action"):
+            generate(action="nope")
+
+
+class TestRequiredArguments:
+    def test_missing_prompt_version_is_rejected(self):
+        with pytest.raises(TypeError):
+            generate_content("p", None, SCHEMA, action="topic", context={})
+
+    def test_missing_context_is_rejected(self):
+        with pytest.raises(TypeError):
+            generate_content("p", None, SCHEMA, action="topic", prompt_version="v1")
+
+    def test_empty_prompt_version_is_rejected(self):
+        with pytest.raises(ValueError, match="prompt_version"):
+            generate(prompt_version="")
+
+    def test_non_dict_context_is_rejected(self):
+        with pytest.raises(ValueError, match="context"):
+            generate(context=None)
+
+    def test_missing_schema_is_rejected(self):
+        with pytest.raises(TypeError):
+            generate_content("p", None, action="topic", prompt_version="v1", context={})
+
+    def test_empty_schema_is_rejected(self):
+        with pytest.raises(ValueError, match="output_schema"):
+            generate(output_schema=None)
+
+    def test_missing_action_is_rejected(self):
+        with pytest.raises(TypeError):
+            generate_content("p", None, SCHEMA, prompt_version="v1", context={})
+
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+
+
+@LOG_DB
+class TestCallLog:
+    def test_row_records_the_call(self):
+        patcher, _ = fake_groq(reply(GOOD))
+        with patcher:
+            generate()
+        row = rows()[0]
+        assert row.action == "topic"
+        assert row.prompt_version == "test-v1"
+        assert row.provider == "groq"
+        assert row.model == "openai/gpt-oss-120b"
+        assert row.request_messages[0] == {"role": "system", "content": "Be brief."}
+        assert "What is the answer?" in row.request_messages[1]["content"]
+        assert row.raw_response == json.dumps(GOOD)
+        assert row.parsed_data == GOOD
+        assert row.latency_ms >= 0
+        assert row.usage == USAGE
+        assert row.context == {"topic_id": 7, "subject_id": 3}
+        assert row.topic_id == 7
+
+    def test_no_topic_id_without_one_in_context(self):
+        patcher, _ = fake_groq(reply(GOOD))
+        with patcher:
+            generate(context={"subject_id": 3})
+        assert rows()[0].topic_id is None
+
+    def test_log_write_failure_does_not_break_the_call(self):
+        patcher, _ = fake_groq(reply(GOOD))
+        with patcher, patch.object(
+            AIGenerationLog.objects, "create", side_effect=RuntimeError("db down")
+        ), patch("apps.ai.calllog.sentry_sdk.capture_exception") as sentry:
+            result = generate()
+        assert result.data == GOOD
+        assert result.log_id is None
+        sentry.assert_called_once()
+
+    def test_failed_call_row_survives_caller_rollback(self):
+        User = get_user_model()
+        patcher, _ = fake_groq(*[reply({}, status=500)] * 3)
+        with patcher, pytest.raises(ProviderError):
+            with transaction.atomic():
+                User.objects.create_user(email="rollback@test.com", password="p")
+                generate()
+        assert not User.objects.filter(email="rollback@test.com").exists()
+        assert [r.outcome for r in rows()] == ["http_error"] * 3
+
+    @override_settings(AI_LOG_MAX_FIELD_BYTES=40)
+    def test_large_fields_are_truncated_with_marker(self):
+        long_answer = {"answer": "x" * 200}
+        patcher, _ = fake_groq(reply(long_answer))
+        with patcher:
+            generate(prompt="p" * 200)
+        row = rows()[0]
+        assert row.raw_response.startswith(json.dumps(long_answer)[:40])
+        assert "[truncated: " in row.raw_response
+        assert "[truncated: " in row.request_messages[1]["content"]
+        assert row.parsed_data["truncated"] is True
+
+    def test_outcome_annotation_is_stored_by_log_id(self):
+        patcher, _ = fake_groq(reply(GOOD))
+        with patcher:
+            result = generate()
+        annotate_outcome(result.log_id, {"verdict": "repaired"})
+        assert AIGenerationLog.objects.get(id=result.log_id).outcome_annotation == {
+            "verdict": "repaired"
+        }
+
+    def test_annotating_an_unknown_id_does_not_raise(self):
+        annotate_outcome(999_999, {"verdict": "x"})
+        annotate_outcome(None, {"verdict": "x"})
+
+
+# ---------------------------------------------------------------------------
+# Review and other public functions
+# ---------------------------------------------------------------------------
+
+
+@LOG_DB
+class TestReviewContent:
+    def test_returns_result_on_success(self):
+        patcher, _ = fake_groq(reply(REVIEW_OK))
+        with patcher:
+            result = review_content("Some content", context={"topic_id": 1})
+        assert result.data["overall_passed"] is True
+        assert rows()[0].prompt_version == "review-v0"
+
+    def test_outage_raises_and_returns_no_fake_result(self):
+        patcher, _ = fake_groq(*[reply({}, status=503)] * 3)
+        with patcher, pytest.raises(ProviderError):
+            review_content("Some content", context={"topic_id": 1})
+        assert len(rows()) == 3
+
+    def test_malformed_review_moves_to_next_step_not_a_retry_loop(self):
+        patcher, client = fake_groq(reply({"accuracy": {"pass": True, "note": "OK"}}), reply(REVIEW_OK))
+        with patcher:
+            result = review_content("Some content", context={})
+        assert result.steps_tried == 2
+        assert [p["model"] for p in client.payloads] == ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
+
+    def test_standardize_uses_its_own_chain(self):
+        patcher, client = fake_groq(reply({"standardized_name": "X", "is_specific": True}))
+        with patcher:
+            result = standardize_subject_name("x", context={"raw_input": "x"})
+        assert result.data["standardized_name"] == "X"
+        assert client.payloads[0]["model"] == "openai/gpt-oss-20b"
+        assert rows()[0].action == "standardize"
 
 
 class TestActionChains:
@@ -178,7 +325,7 @@ class TestActionChains:
     EXPECTED = {
         "roadmap": [("openai/gpt-oss-120b", "medium"), ("qwen/qwen3.8-27b", None), ("openai/gpt-oss-20b", "medium")],
         "topic": [("openai/gpt-oss-120b", "medium"), ("qwen/qwen3.8-27b", None), ("openai/gpt-oss-20b", "medium")],
-        "review": [("qwen/qwen3.8-27b", "default"), ("openai/gpt-oss-120b", "medium"), ("openai/gpt-oss-20b", "medium")],
+        "review": [("openai/gpt-oss-120b", "medium"), ("qwen/qwen3.8-27b", "default"), ("openai/gpt-oss-20b", "medium")],
         "quiz_normal": [("openai/gpt-oss-120b", "low"), ("openai/gpt-oss-20b", "low"), ("qwen/qwen3.8-27b", None)],
         "quiz_advanced": [("openai/gpt-oss-120b", "medium"), ("openai/gpt-oss-20b", "medium"), ("qwen/qwen3.8-27b", None)],
         "standardize": [("openai/gpt-oss-20b", "low"), ("openai/gpt-oss-120b", "low")],
@@ -186,136 +333,65 @@ class TestActionChains:
     }
 
     def test_chains_match_the_agreed_table(self):
-        from apps.ai.services import _ACTION_CHAINS
         assert set(_ACTION_CHAINS) == set(self.EXPECTED)
         for action, expected in self.EXPECTED.items():
             assert [(s.model, s.effort) for s in _ACTION_CHAINS[action]] == expected
             assert all(s.provider == "groq" for s in _ACTION_CHAINS[action])
 
+    def test_review_chain_order(self):
+        assert [s.model for s in _ACTION_CHAINS["review"]] == [
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-20b",
+        ]
+
     def test_every_action_has_a_token_cap(self):
-        from apps.ai.services import _ACTION_CHAINS, _MAX_COMPLETION_TOKENS
         assert set(_MAX_COMPLETION_TOKENS) == set(_ACTION_CHAINS)
         assert all(v >= 4096 for v in _MAX_COMPLETION_TOKENS.values())
         for action in ("roadmap", "topic", "quiz_normal", "quiz_advanced"):
             assert _MAX_COMPLETION_TOKENS[action] == 8192
 
 
-class TestFallbackDispatch:
-    MSGS = [{"role": "user", "content": "hi"}]
-
-    @patch("apps.ai.services._call_provider")
-    def test_passes_effort_and_token_cap_for_each_step(self, mock_call):
-        from apps.ai.services import _call_with_fallback
-        mock_call.return_value = {"ok": True}
-        _call_with_fallback("quiz_normal", self.MSGS, {}, "Quiz")
-        args, kwargs = mock_call.call_args
-        assert args[1] == "openai/gpt-oss-120b"
-        assert kwargs == {"effort": "low", "max_tokens": 8192}
-
-    @patch("apps.ai.services._call_provider")
-    def test_falls_through_the_chain_in_order(self, mock_call):
-        from apps.ai.services import _call_with_fallback
-        mock_call.side_effect = [RuntimeError("503"), RuntimeError("429"), {"ok": True}]
-        result = _call_with_fallback("roadmap", self.MSGS, {}, "Roadmap")
-        assert result == {"ok": True}
-        used = [c.args[1] for c in mock_call.call_args_list]
-        assert used == ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
-        # The third step is gpt-oss-20b at medium effort.
-        assert mock_call.call_args_list[2].kwargs["effort"] == "medium"
-        # Qwen has no effort override for roadmaps.
-        assert mock_call.call_args_list[1].kwargs["effort"] is None
-
-    @patch("apps.ai.services._call_provider", side_effect=RuntimeError("down"))
-    def test_raises_provider_error_when_every_step_fails(self, _mock):
-        from apps.ai.services import _call_with_fallback
-        with pytest.raises(ProviderError, match="All providers failed for review"):
-            _call_with_fallback("review", self.MSGS, {}, "Review")
-
-    def test_unknown_action_is_rejected(self):
-        from apps.ai.services import _call_with_fallback
-        with pytest.raises(ValueError, match="Unknown AI action"):
-            _call_with_fallback("nope", self.MSGS, {}, "X")
+# ---------------------------------------------------------------------------
+# Shape validation and error classification
+# ---------------------------------------------------------------------------
 
 
-class TestGroqCallParameters:
-    @staticmethod
-    def _fake_client(body, captured):
-        class Resp:
-            def raise_for_status(self):
-                pass
+class TestValidateShape:
+    def test_passes_valid_data(self):
+        _validate_shape(REVIEW_OK, REVIEW_SCHEMA)
 
-            def json(self):
-                return body
+    def test_fails_on_missing_key(self):
+        with pytest.raises(ResponseShapeError, match="Missing required key"):
+            _validate_shape({"accuracy": {"pass": True, "note": "OK"}}, REVIEW_SCHEMA)
 
-        class Client:
-            def post(self, path, json):
-                captured["payload"] = json
-                return Resp()
+    def test_fails_on_wrong_type(self):
+        data = {**REVIEW_OK, "accuracy": {"pass": "yes", "note": "OK"}}
+        with pytest.raises(ResponseShapeError, match="expected boolean"):
+            _validate_shape(data, REVIEW_SCHEMA)
 
-        return Client()
+    def test_fails_on_non_object_top_level(self):
+        with pytest.raises(ResponseShapeError, match="Expected object"):
+            _validate_shape("not a dict", REVIEW_SCHEMA)
 
-    @patch("apps.ai.services.get_client")
-    def test_sends_reasoning_effort_and_max_completion_tokens(self, mock_client):
-        from apps.ai.services import _call_openai_compatible
-        captured = {}
-        mock_client.return_value = self._fake_client(
-            {"choices": [{"finish_reason": "stop", "message": {"content": "{\"a\": 1}"}}]}, captured
-        )
-        out = _call_openai_compatible(
-            PROVIDERS["groq"], "openai/gpt-oss-120b", [], {"type": "json_schema"},
-            reasoning_effort="low", max_completion_tokens=8192,
-        )
-        assert out == {"a": 1}
-        assert captured["payload"]["reasoning_effort"] == "low"
-        assert captured["payload"]["max_completion_tokens"] == 8192
-
-    @patch("apps.ai.services.get_client")
-    def test_omits_optional_parameters_when_unset(self, mock_client):
-        from apps.ai.services import _call_openai_compatible
-        captured = {}
-        mock_client.return_value = self._fake_client(
-            {"choices": [{"finish_reason": "stop", "message": {"content": "{}"}}]}, captured
-        )
-        _call_openai_compatible(PROVIDERS["groq"], "qwen/qwen3.8-27b", [])
-        assert "reasoning_effort" not in captured["payload"]
-        assert "max_completion_tokens" not in captured["payload"]
-
-    @patch("apps.ai.services.get_client")
-    def test_truncated_response_is_an_error_not_partial_json(self, mock_client):
-        from apps.ai.services import _call_openai_compatible
-        mock_client.return_value = self._fake_client(
-            {"choices": [{"finish_reason": "length", "message": {"content": "{\"a\": [1, 2"}}]}, {}
-        )
-        with pytest.raises(ProviderError, match="truncated"):
-            _call_openai_compatible(PROVIDERS["groq"], "openai/gpt-oss-20b", [], max_completion_tokens=2048)
-
-    @patch("apps.ai.services._call_openai_compatible")
-    def test_truncation_moves_the_chain_to_the_next_model(self, mock_openai):
-        from apps.ai.services import _call_with_fallback
-        mock_openai.side_effect = [ProviderError("truncated", provider="groq"), {"ok": True}]
-        assert _call_with_fallback("quiz_normal", [], {}, "Quiz") == {"ok": True}
-        assert [c.args[1] for c in mock_openai.call_args_list] == ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+    def test_validates_nested_array_items(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "links": {
+                    "type": "array",
+                    "items": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]},
+                }
+            },
+            "required": ["links"],
+        }
+        with pytest.raises(ResponseShapeError, match=r"links\[0\]"):
+            _validate_shape({"links": [{"title": "T"}]}, schema)
 
 
-class TestGenerateContentAction:
-    @patch("apps.ai.services._call_with_fallback")
-    def test_action_selects_the_chain(self, mock_fallback):
-        from apps.ai.services import generate_content
-        mock_fallback.return_value = {"topics": []}
-        schema = {"type": "object", "properties": {"topics": {"type": "array"}}, "required": ["topics"]}
-        generate_content("p", output_schema=schema, action="roadmap")
-        assert mock_fallback.call_args.args[0] == "roadmap"
+class TestIsRetryableError:
+    def test_provider_error_is_not_retryable(self):
+        assert _is_retryable_error(ProviderError("test", provider="groq")) is False
 
-    @patch("apps.ai.services._call_with_fallback")
-    def test_defaults_to_topic_action(self, mock_fallback):
-        from apps.ai.services import generate_content
-        mock_fallback.return_value = {"summary": "s", "resource_links": []}
-        generate_content("p")
-        assert mock_fallback.call_args.args[0] == "topic"
-
-    @patch("apps.ai.services._call_with_fallback")
-    def test_standardize_uses_its_own_chain(self, mock_fallback):
-        from apps.ai.services import standardize_subject_name
-        mock_fallback.return_value = {"standardized_name": "X", "is_specific": True}
-        standardize_subject_name("x")
-        assert mock_fallback.call_args.args[0] == "standardize"
+    def test_non_retryable_returns_false(self):
+        assert _is_retryable_error(ValueError("nope")) is False

@@ -13,12 +13,24 @@ Code: `apps/ai/services.py` (`_ACTION_CHAINS`, `_MAX_COMPLETION_TOKENS`, `genera
 | Action | Chain (model, effort) |
 |---|---|
 | `roadmap`, `topic` | gpt-oss-120b (medium), qwen3.8-27b, gpt-oss-20b (medium) |
-| `review` | qwen3.8-27b (thinking on), gpt-oss-120b (medium), gpt-oss-20b (medium) |
+| `review` | gpt-oss-120b (medium), qwen3.8-27b (thinking on), gpt-oss-20b (medium) |
 | `quiz_normal` | gpt-oss-120b (low), gpt-oss-20b (low), qwen3.8-27b |
 | `quiz_advanced` | gpt-oss-120b (medium), gpt-oss-20b (medium), qwen3.8-27b |
 | `standardize`, `resolve` | gpt-oss-20b (low), gpt-oss-120b (low) |
 
-Check `_ACTION_CHAINS` for the live values. Every call sets `max_completion_tokens` (8192 for generation) and a per-step `reasoning_effort`. `finish_reason == "length"` counts as a failure and moves to the next step.
+Check `_ACTION_CHAINS` for the live values. Every call sets `max_completion_tokens` (8192 for generation) and a per-step `reasoning_effort`. A step fails, and the chain moves to the next step, on an HTTP error or timeout, `finish_reason == "length"`, invalid JSON, or JSON in the wrong shape. When every step fails the call raises `ProviderError`, for every action including review; Celery tasks retry on it.
+
+Every public function returns an `AIResult`: `data`, `provider`, `model`, `steps_tried`, `latency_ms` and `log_id`. Callers pass a `prompt_version` and a JSON-safe `context` (topic id, subject id, quiz attempt id); neither has a default.
+
+## Call log
+
+Every chain step attempt writes one `AIGenerationLog` row (`apps/ai/models.py`): action, prompt version, provider and model, step position and whether it served the call, outcome (`success` or `http_error`, `truncated`, `malformed_json`, `shape_invalid`, `timeout`, `other`), the request messages, raw response, parsed data, latency, token usage, context and topic id. Text fields are capped at `AI_LOG_MAX_FIELD_BYTES` (100 KB) with a truncation marker.
+
+- Written by the dispatcher (`apps/ai/calllog.py`), never by callers. A failed log write goes to Sentry and never breaks the call.
+- Rows go through a second database connection (`ai_log` alias, same database, `config/utils/db_routers.py`), so a failed call is still recorded when the caller's transaction rolls back.
+- Callers may attach what they made of a call with `annotate_outcome(log_id, ...)` (the topic review stores `overall_passed`).
+- Browse and judge rows in Django admin (`/admin/ai/aigenerationlog/`): only `human_verdict` and `human_note` are editable.
+- Retention: `ai.delete_old_generation_logs` runs daily and deletes rows older than `AI_LOG_RETENTION_DAYS` (default 90) in batches.
 
 ## Why these settings (evidence, 2026-10-14)
 

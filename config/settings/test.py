@@ -6,7 +6,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': ':memory:',
-    }
+    },
+    # A separate in-memory database: SQLite cannot give a second connection
+    # to the same in-memory DB its own transaction. Tests that touch
+    # AIGenerationLog need django_db(databases=["default", "ai_log"]).
+    'ai_log': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    },
 }
 
 PASSWORD_HASHERS = [
@@ -15,6 +22,12 @@ PASSWORD_HASHERS = [
 
 MIGRATION_MODULES = {
     'ai': None,
+}
+
+# Admin pages render static tags; the manifest storage would need collectstatic.
+STORAGES = {
+    **STORAGES,
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
 }
 
 CELERY_TASK_ALWAYS_EAGER = True
