@@ -154,6 +154,16 @@ class TestAdvanceDueTime:
         expected = original + timedelta(hours=6)
         assert usp.next_due_at == expected
 
+    def test_long_overdue_restarts_from_now(self, usp):
+        """Regression: a reminder 30 days late stepped one interval per run, firing every 15 min."""
+        usp.next_due_at = timezone.now() - timedelta(days=30)
+        usp.save(update_fields=["next_due_at"])
+        before = timezone.now()
+        advance_due_time(usp, usp.next_due_at)
+        usp.refresh_from_db()
+        assert usp.next_due_at >= before + timedelta(hours=24)
+        assert usp not in get_due_notifications()
+
 
 @pytest.mark.django_db
 class TestDispatchNotifications:

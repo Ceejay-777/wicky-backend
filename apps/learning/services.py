@@ -596,7 +596,12 @@ def get_due_notifications():
 
 
 def advance_due_time(usp, from_time):
-    usp.next_due_at = from_time + timedelta(hours=usp.notification_frequency_hours)
+    interval = timedelta(hours=usp.notification_frequency_hours)
+    # Keep the cadence when on time, but a long-overdue reminder restarts from now:
+    # stepping through every missed slot made one AI generation per slot.
+    next_due = from_time + interval
+    now = timezone.now()
+    usp.next_due_at = next_due if next_due > now else now + interval
     usp.save(update_fields=["next_due_at"])
 
 
