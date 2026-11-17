@@ -2,6 +2,10 @@
 
 Django 5.1 · DRF · Celery · PostgreSQL/pgvector · Redis · Groq (text) · Gemini (embeddings). Code is the source of truth; `docs/README.md` indexes the docs.
 
+## Project stage
+
+Wicky is still wholly in development: there are no real users and no data worth keeping. Change models, migrations, API shapes and stored data freely; do not add backfills, compatibility shims or deprecation paths for existing rows or clients. Prefer the clean design over the backward-compatible one. Reset the database if a change calls for it.
+
 ## Where to look
 
 | Need | Go to |
