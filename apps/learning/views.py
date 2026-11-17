@@ -473,6 +473,7 @@ class TopicDetailView(GenericAPIView):
             "data": {
                 "id": topic.id,
                 "title": topic.title,
+                "description": topic.description,
                 "summary": topic.summary,
                 "resource_links": topic.resource_links,
                 "level": topic.level,

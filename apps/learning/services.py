@@ -21,6 +21,7 @@ from apps.ai.services import (
 )
 
 from .exceptions import GenerationError
+from .prompts import build_roadmap_prompt
 from .models import (
     QuizAttempt,
     Subject,
@@ -191,92 +192,6 @@ def resolve_or_create_subject(raw_input: str) -> ResolveResult | NarrowResult:
     )
 
 
-ROADMAP_SYSTEM_INSTRUCTION = (
-    "You are an expert curriculum designer. You create structured, pedagogically sound "
-    "learning roadmaps that progress from foundational concepts through intermediate skills "
-    "to advanced mastery. Each topic should be scoped to a single sitting and ordered "
-    "so every topic builds on what came before it. Avoid generic placeholder names — "
-    "topics should be concrete and specific to the subject."
-)
-
-TOPIC_CONTENT_SYSTEM_INSTRUCTION = (
-    "You are an educational content writer creating concise, engaging summaries for a "
-    "self-paced learning platform. Write for a curious adult learner with no prior knowledge "
-    "of the topic. Prioritize clarity and practical understanding over academic formalism. "
-    "Every resource link should point to a real, publicly accessible resource that deepens "
-    "understanding of the specific topic — not generic reference sites."
-)
-
-# Placeholder versions until pass 2 versions the topic and roadmap prompts.
-TOPIC_PROMPT_VERSION = "topic-v0"
-ROADMAP_PROMPT_VERSION = "roadmap-v0"
-
-TOPIC_CONTENT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "summary": {"type": "string"},
-        "resource_links": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "url": {"type": "string"},
-                    "type": {
-                        "type": "string",
-                        "enum": ["article", "video", "wikipedia"],
-                    },
-                },
-                "required": ["title", "url", "type"],
-            },
-            "minItems": 2,
-            "maxItems": 5,
-        },
-    },
-    "required": ["summary", "resource_links"],
-}
-
-_VALID_TYPES = {"article", "video", "wikipedia"}
-
-
-def _validate_topic_content(data: dict) -> dict:
-    if not isinstance(data, dict):
-        raise GenerationError(
-            "Response is not a dict", phase="topic_content_validation"
-        )
-    summary = data.get("summary")
-    if not isinstance(summary, str) or not summary.strip():
-        raise GenerationError(
-            "Missing or empty 'summary'", phase="topic_content_validation"
-        )
-    links = data.get("resource_links")
-    if not isinstance(links, list) or len(links) < 2 or len(links) > 5:
-        raise GenerationError(
-            f"Expected 2-5 resource_links, got {len(links) if isinstance(links, list) else 'invalid'}",
-            phase="topic_content_validation",
-        )
-    for i, link in enumerate(links):
-        if not isinstance(link, dict):
-            raise GenerationError(
-                f"Resource link {i} is not a dict", phase="topic_content_validation"
-            )
-        if not isinstance(link.get("title"), str) or not link["title"].strip():
-            raise GenerationError(
-                f"Resource link {i} missing valid title",
-                phase="topic_content_validation",
-            )
-        if not isinstance(link.get("url"), str) or not link["url"].strip():
-            raise GenerationError(
-                f"Resource link {i} missing valid url", phase="topic_content_validation"
-            )
-        if link.get("type") not in _VALID_TYPES:
-            raise GenerationError(
-                f"Resource link {i} invalid type '{link.get('type')}'",
-                phase="topic_content_validation",
-            )
-    return {"summary": summary.strip(), "resource_links": links}
-
-
 def ensure_topic_content_ready(topic_id: int) -> bool:
     updated = Topic.objects.filter(
         id=topic_id,
@@ -311,41 +226,6 @@ def request_topic_generation(topic_id: int) -> bool:
         publish_topic_status(topic_id)
         return False
     return True
-
-
-def generate_topic_content(topic_id: int) -> None:
-    topic = Topic.objects.get(id=topic_id)
-    max_attempts = 2
-    for attempt in range(max_attempts):
-        response = generate_content(
-            prompt=(
-                f"Write a self-contained educational summary for the topic "
-                f"'{topic.title}' as part of the subject '{topic.subject.name}'.\n\n"
-                f"The summary should be 300-500 words and written for someone encountering "
-                f"this topic for the first time. Focus on the core ideas, key terms, "
-                f"and why this topic matters in the broader subject.\n\n"
-                f"Also provide 2-5 carefully chosen external resource links. Prefer "
-                f"Wikipedia for foundational overviews, reputable articles for depth, "
-                f"and YouTube for visual explanations. Each link must point to a real, "
-                f"accessible resource that is directly relevant to this specific topic."
-            ),
-            system_instruction=TOPIC_CONTENT_SYSTEM_INSTRUCTION,
-            output_schema=TOPIC_CONTENT_SCHEMA,
-            action="topic",
-            prompt_version=TOPIC_PROMPT_VERSION,
-            context={"topic_id": topic.id, "subject_id": topic.subject_id},
-        )
-        try:
-            validated = _validate_topic_content(response.data)
-            break
-        except GenerationError:
-            if attempt >= max_attempts - 1:
-                raise
-            continue
-    Topic.objects.filter(id=topic_id).update(
-        summary=validated["summary"],
-        resource_links=validated["resource_links"],
-    )
 
 
 def review_topic_content(topic_id: int) -> bool:
@@ -384,28 +264,6 @@ def generate_initial_batch(subject: Subject) -> None:
         request_topic_generation(t.id)
 
 
-ROADMAP_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "topics": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "level": {"type": "integer", "minimum": 1, "maximum": 3},
-                    "description": {"type": "string"},
-                },
-                "required": ["title", "level", "description"],
-            },
-            "minItems": 20,
-            "maxItems": 25,
-        },
-    },
-    "required": ["topics"],
-}
-
-
 def _validate_roadmap_response(data: dict) -> list[dict]:
     if not isinstance(data, dict) or "topics" not in data:
         raise GenerationError(
@@ -431,32 +289,25 @@ def _validate_roadmap_response(data: dict) -> list[dict]:
             raise GenerationError(
                 f"Topic {i} has invalid level", phase="roadmap_validation"
             )
-        validated.append({"title": t["title"].strip(), "level": t["level"]})
+        description = t.get("description")
+        validated.append({
+            "title": t["title"].strip(),
+            "level": t["level"],
+            # A missing goal never fails the roadmap; the prompts read well without one.
+            "description": description.strip() if isinstance(description, str) else "",
+        })
     return validated
 
 
 def generate_roadmap(subject: Subject, max_retries: int = 1) -> list[Topic]:
-    prompt = (
-        f"Design a 20-25 topic learning roadmap for the subject '{subject.name}'.\n\n"
-        f"Structure it across 3 levels of depth:\n"
-        f"  Level 1 (7-8 topics): Core foundations every beginner needs. "
-        f"Start with the basics and build toward intermediate ground.\n"
-        f"  Level 2 (7-8 topics): Deeper dives and practical application. "
-        f"Assume the learner has completed Level 1.\n"
-        f"  Level 3 (6-9 topics): Advanced concepts, edge cases, and current developments. "
-        f"Push the learner toward mastery.\n\n"
-        f"For each topic provide a title (concrete, 3-7 words), a level (1/2/3), "
-        f"and a one-sentence description of what the learner will understand after completing it.\n\n"
-        f"IMPORTANT: The full 20-25 topic sequence must be logically ordered — each topic "
-        f"should build on concepts introduced in earlier topics."
-    )
+    prompt = build_roadmap_prompt(subject.name)
     for attempt in range(max_retries + 1):
         response = generate_content(
-            prompt=prompt,
-            system_instruction=ROADMAP_SYSTEM_INSTRUCTION,
-            output_schema=ROADMAP_SCHEMA,
+            prompt.text,
+            prompt.system_instruction,
+            prompt.schema,
             action="roadmap",
-            prompt_version=ROADMAP_PROMPT_VERSION,
+            prompt_version=prompt.version,
             context={"subject_id": subject.id},
         )
         try:
@@ -467,7 +318,13 @@ def generate_roadmap(subject: Subject, max_retries: int = 1) -> list[Topic]:
                 raise
 
     topics = [
-        Topic(subject=subject, title=t["title"], level=t["level"], order=i + 1)
+        Topic(
+            subject=subject,
+            title=t["title"],
+            level=t["level"],
+            description=t["description"],
+            order=i + 1,
+        )
         for i, t in enumerate(validated)
     ]
     return Topic.objects.bulk_create(topics)
@@ -485,7 +342,11 @@ def append_roadmap_topics(subject: Subject, topics_data: list[dict]) -> list[Top
 
     topics = [
         Topic(
-            subject=subject, title=t["title"], level=t["level"], order=max_order + i + 1
+            subject=subject,
+            title=t["title"],
+            level=t["level"],
+            description=t.get("description", ""),
+            order=max_order + i + 1,
         )
         for i, t in enumerate(topics_data)
     ]
@@ -511,6 +372,7 @@ def insert_roadmap_topics(
             subject=subject,
             title=t["title"],
             level=t["level"],
+            description=t.get("description", ""),
             order=insert_before_order + i,
         )
         for i, t in enumerate(topics_data)
@@ -561,7 +423,7 @@ def insert_roadmap_topics(
 
 
 def update_roadmap_topic(topic_id: int, **fields) -> Topic:
-    valid = {k: v for k, v in fields.items() if k in ("title", "level")}
+    valid = {k: v for k, v in fields.items() if k in ("title", "level", "description")}
     if valid:
         Topic.objects.filter(id=topic_id).update(**valid)
     return Topic.objects.get(id=topic_id)
@@ -685,6 +547,7 @@ def get_subject_detail(user, subject_id: int) -> SubjectDetailResult:
             {
                 "id": t.id,
                 "title": t.title,
+                "description": t.description,
                 "level": t.level,
                 "order": t.order,
                 "content_status": t.content_status,
@@ -1001,6 +864,7 @@ def get_subject_preview(user, subject_id: int) -> SubjectPreviewResult:
         {
             "id": t.id,
             "title": t.title,
+            "description": t.description,
             "level": t.level,
             "order": t.order,
         }

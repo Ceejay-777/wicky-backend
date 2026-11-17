@@ -90,7 +90,7 @@ class TestProviderDownOnLastRetry:
         task = generate_content_for_topic
         task.push_request(retries=retries)
         try:
-            with patch("apps.learning.services.generate_content",
+            with patch("apps.learning.pipeline.generate_content",
                        side_effect=ProviderError("down", provider="groq")):
                 with pytest.raises(ProviderError):
                     task(topic.id)

@@ -53,6 +53,8 @@ class Topic(models.Model):
         Subject, on_delete=models.CASCADE, related_name="topics"
     )
     title = models.CharField(max_length=255)
+    # One-sentence goal from the roadmap: what the learner will understand after it.
+    description = models.TextField(blank=True, default="")
     summary = models.TextField(blank=True, default="")
     resource_links = models.JSONField(blank=True, default=list)
     level = models.PositiveSmallIntegerField(choices=Level.choices)

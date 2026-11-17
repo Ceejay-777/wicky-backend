@@ -17,7 +17,7 @@ One entry per item, numbered `F-n`, never reused. Status: `Open`, `In progress`,
 ## F-1. Resource links are mostly dead or invented
 56 checked links: 24 dead, 13 ok, 19 unverifiable (YouTube 13 dead / 1 ok; recipe/blog deep links dead; kubernetes.io 7/7 ok). Nothing checks them, including the reviewer.
 Options: verify server-side after generation (YouTube oEmbed, GET with a browser UA; 404/410/DNS = dead, 403/429 = unknown) and regenerate when fewer than 2 survive; prefer Wikipedia (build the URL from the API) and official docs; stop asking for YouTube; give the reviewer the check result. Also a one-off script to prune dead links already stored.
-Code: `_validate_topic_content`, `generate_topic_content`, `generate_content_for_topic`.
+Code: `validate_topic_content`, `generate_topic_content` (`apps/learning/pipeline.py`), `generate_content_for_topic`.
 
 ## F-2. Quiz answer keys are never verified
 Blind second-model agreement with the key: normal 67-87%, advanced 75-90%, worst single quiz 25%. A wrong key fails a learner who was right.

@@ -30,7 +30,7 @@ def _mark_topic_failed(topic_id: int) -> None:
 )
 def generate_content_for_topic(self, topic_id: int) -> None:
     from .exceptions import GenerationError
-    from .services import generate_topic_content
+    from .pipeline import generate_topic_content
 
     # The caller already claimed the topic (request_topic_generation).
     try:

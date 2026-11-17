@@ -32,6 +32,14 @@ Every chain step attempt writes one `AIGenerationLog` row (`apps/ai/models.py`):
 - Browse and judge rows in Django admin (`/admin/ai/aigenerationlog/`): only `human_verdict` and `human_note` are editable.
 - Retention: `ai.delete_old_generation_logs` runs daily and deletes rows older than `AI_LOG_RETENTION_DAYS` (default 90) in batches.
 
+## Topic prompts
+
+- Roadmap and topic prompt text, system instructions, schemas and versions live in `apps/learning/prompts.py`. Builders there are pure (plain values in, `Prompt` out: text, system instruction, schema, version). Quiz prompts are still in `apps/learning/services.py`. Review, standardize and resolve prompts are in `apps/ai/prompts.py`.
+- Every prompt has a version label (`topic-v1`, `roadmap-v1`, ...), recorded on each log row. Any wording change bumps the version, so log rows can be compared across prompt versions.
+- The topic writer gets the subject, title, the topic's goal sentence (`Topic.description`, from the roadmap; may be blank), its level and what that level's reader knows, and the previous and next topic titles (do not re-teach the previous one, do not cover the next one).
+- The summary is four plain paragraphs, in order: what it is; key terms and ideas; one concrete example or analogy; why it matters and what it leads to. Plain text, paragraphs separated by one blank line, no markdown, 300-500 words. The frontend splits on newlines and renders no markdown (`toParagraphs` in `wicky-frontend/apps/web/src/lib/learning/reading.ts`).
+- The topic pipeline (`apps/learning/pipeline.py`) normalises the summary in code (strips heading, bullet, bold and italic markers; collapses blank lines; straightens smart quotes) and then rejects only an empty summary or one outside 120-900 words (`SUMMARY_MIN_WORDS`, `SUMMARY_MAX_WORDS`). Paragraph count is not checked.
+
 ## Why these settings (evidence, 2026-10-14)
 
 - **Always set `max_completion_tokens`.** Without it, reasoning tokens ate the room and JSON was cut off (the old `json_validate_failed` 400s). With 8192: 59/60 valid generations across all three models.

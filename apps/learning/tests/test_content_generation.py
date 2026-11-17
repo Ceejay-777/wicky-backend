@@ -29,12 +29,12 @@ class TestTopicModelExtended:
         assert topic.generation_started_at is not None
 
 
-from apps.learning.services import _validate_topic_content
+from apps.learning.pipeline import validate_topic_content as _validate_topic_content
 from apps.learning.exceptions import GenerationError
 
 
 VALID_DATA = {
-    "summary": "A short summary of the topic. It should be a few sentences explaining key concepts.",
+    "summary": " ".join(["word"] * 150),
     "resource_links": [
         {"title": "Wikipedia Article", "url": "https://en.wikipedia.org/wiki/Example", "type": "article"},
         {"title": "Educational Video", "url": "https://youtube.com/watch?v=xyz", "type": "video"},
@@ -86,10 +86,11 @@ class TestTopicContentValidation:
 
 from unittest.mock import patch
 from django.utils import timezone
-from apps.learning.services import (
-    ensure_topic_content_ready, generate_topic_content, review_topic_content,
-)
+from apps.learning.pipeline import generate_topic_content
+from apps.learning.services import ensure_topic_content_ready, review_topic_content
 from apps.ai.exceptions import ProviderError
+
+LONG_SUMMARY = " ".join(["word"] * 150)
 
 
 @pytest.mark.django_db
@@ -132,10 +133,10 @@ class TestServicesContentGeneration:
 
     # --- generate_topic_content ---
 
-    @patch("apps.learning.services.generate_content")
+    @patch("apps.learning.pipeline.generate_content")
     def test_generate_saves_summary_and_links(self, mock_gen, topic):
         mock_gen.return_value = ai_result({
-            "summary": "A detailed summary about the causes of WW2.",
+            "summary": "The causes of WW2. " + " ".join(["word"] * 150),
             "resource_links": [
                 {"title": "Article", "url": "https://example.com/a", "type": "article"},
                 {"title": "Video", "url": "https://example.com/v", "type": "video"},
@@ -146,28 +147,28 @@ class TestServicesContentGeneration:
         assert "causes of ww2" in topic.summary.lower()
         assert len(topic.resource_links) == 2
 
-    @patch("apps.learning.services.generate_content")
+    @patch("apps.learning.pipeline.generate_content")
     def test_generate_malformed_retry_then_succeeds(self, mock_gen, topic):
         mock_gen.side_effect = [
             ai_result({"summary": "x", "resource_links": []}),
-            ai_result({"summary": "Valid summary.", "resource_links": [
+            ai_result({"summary": LONG_SUMMARY, "resource_links": [
                 {"title": "A", "url": "https://a.com", "type": "article"},
                 {"title": "B", "url": "https://b.com", "type": "video"},
             ]}),
         ]
         generate_topic_content(topic.id)
         topic.refresh_from_db()
-        assert topic.summary == "Valid summary."
+        assert topic.summary == LONG_SUMMARY
         assert mock_gen.call_count == 2
 
-    @patch("apps.learning.services.generate_content")
+    @patch("apps.learning.pipeline.generate_content")
     def test_generate_malformed_exhausted_raises(self, mock_gen, topic):
         mock_gen.return_value = ai_result({"summary": "x", "resource_links": []})
         with pytest.raises(GenerationError):
             generate_topic_content(topic.id)
         assert mock_gen.call_count == 2
 
-    @patch("apps.learning.services.generate_content")
+    @patch("apps.learning.pipeline.generate_content")
     def test_generate_provider_error_propagates(self, mock_gen, topic):
         mock_gen.side_effect = ProviderError("API down", provider="gemini")
         with pytest.raises(ProviderError):
@@ -220,10 +221,10 @@ class TestGenTask:
         )
 
     @patch("apps.learning.tasks.review_content_for_topic.delay")
-    @patch("apps.learning.services.generate_content")
+    @patch("apps.learning.pipeline.generate_content")
     def test_gen_task_happy_path(self, mock_gen, mock_review_delay, topic):
         mock_gen.return_value = ai_result({
-            "summary": "A summary.",
+            "summary": LONG_SUMMARY,
             "resource_links": [
                 {"title": "A", "url": "https://a.com", "type": "article"},
                 {"title": "B", "url": "https://b.com", "type": "video"},
@@ -231,7 +232,7 @@ class TestGenTask:
         })
         generate_content_for_topic(topic.id)
         topic.refresh_from_db()
-        assert topic.summary == "A summary."
+        assert topic.summary == LONG_SUMMARY
         mock_review_delay.assert_called_once_with(topic.id)
 
     @patch("apps.learning.tasks.generate_content_for_topic.delay")
@@ -254,7 +255,7 @@ class TestGenTask:
         assert topic.content_status == Topic.ContentStatus.FAILED
 
     @patch("apps.learning.tasks.review_content_for_topic.delay")
-    @patch("apps.learning.services.generate_content")
+    @patch("apps.learning.pipeline.generate_content")
     def test_gen_task_marks_failed_on_malformed_exhausted(self, mock_gen, mock_review_delay, topic):
         mock_gen.return_value = ai_result({"summary": "x", "resource_links": []})
         generate_content_for_topic(topic.id)
@@ -264,7 +265,7 @@ class TestGenTask:
         mock_review_delay.assert_not_called()
 
     @patch("apps.learning.tasks.review_content_for_topic.delay")
-    @patch("apps.learning.services.generate_content")
+    @patch("apps.learning.pipeline.generate_content")
     def test_gen_task_provider_error_does_not_flag(self, mock_gen, mock_review_delay, topic):
         """ProviderError should propagate up for Celery's own retry."""
         mock_gen.side_effect = ProviderError("API down", provider="gemini")
@@ -594,11 +595,7 @@ class TestLearningSchemasAreGeminiSafe:
 
     def test_real_learning_schemas_are_gemini_safe(self):
         from apps.ai.providers import sanitize_schema_for_gemini
-        from apps.learning.services import (
-            ADVANCED_QUIZ_SCHEMA,
-            NORMAL_QUIZ_SCHEMA,
-            ROADMAP_SCHEMA,
-            TOPIC_CONTENT_SCHEMA,
-        )
+        from apps.learning.prompts import ROADMAP_SCHEMA, TOPIC_CONTENT_SCHEMA
+        from apps.learning.services import ADVANCED_QUIZ_SCHEMA, NORMAL_QUIZ_SCHEMA
         for schema in (ROADMAP_SCHEMA, NORMAL_QUIZ_SCHEMA, ADVANCED_QUIZ_SCHEMA, TOPIC_CONTENT_SCHEMA):
             assert not (self._keys(sanitize_schema_for_gemini(schema)) & self.UNSUPPORTED)

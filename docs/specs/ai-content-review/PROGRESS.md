@@ -47,6 +47,28 @@ Notes for later passes:
 - `generate_topic_content` still calls the writer twice on a domain validation failure; pass 2's normalise-before-reject should shrink this.
 - `_validate_shape` does not check `integer` or `enum`; out-of-range values are left to the learning validators.
 - `verify_provider_models` is not called anywhere (the old unused import was dropped).
-## Pass 2: not started
+## Pass 2 — 2026-11-17
+Commit: the `feat(learning): give the topic writer goal, level and neighbours` commit on `feat/ai-content-review`
+Tests: 524 → 554 (all passing: yes; still only the pre-existing `google.generativeai` FutureWarning)
+Done:
+- `Topic.description` (`TextField`, blank allowed, default `""`; migration `learning/0013_topic_description`). Roadmap validation keeps it trimmed; missing, blank or non-string stores `""` and never fails the roadmap. `append_roadmap_topics`, `insert_roadmap_topics` and `update_roadmap_topic` accept an optional `description`. Exposed read-only, with help text, on topic detail, subject roadmap (`SubjectTopicProgressSerializer`) and preview (`SubjectPreviewTopicSerializer`).
+- `apps/learning/prompts.py` owns roadmap and topic prompt text, system instructions, schemas and versions (`roadmap-v1`, `topic-v1`). Pure builders `build_roadmap_prompt(subject_name)` and `build_topic_prompt(subject_name=, title=, level=, goal=, previous_title=, next_title=)` return a `Prompt` (text, system instruction, schema, version). No roadmap or topic prompt text is left in `services.py`.
+- Topic prompt: subject, title, level with its reader description, goal when present, previous/next titles when present with the do-not-re-teach / do-not-cover rules, the four-part shape, plain-text rule, 300-500 words, links instruction (same meaning). Audience fit and completeness are writer instructions now. The system instruction no longer says "no prior knowledge" (that contradicted levels 2 and 3).
+- `apps/learning/pipeline.py`: gathers topic, subject and neighbours (one query), builds the prompt, calls the AI with version and context, normalises (`normalise_summary`), validates (`validate_topic_content`: empty or outside `SUMMARY_MIN_WORDS`-`SUMMARY_MAX_WORDS` = 120-900 words rejected; link checks unchanged; paragraph count not checked), saves. `generate_content_for_topic` calls it; its error handling is unchanged.
+- Tests: `apps/learning/tests/test_generation_quality.py` (every test in section 2.7, plus the task on success). Existing tests now patch `apps.learning.pipeline.generate_content` and use summaries inside the word bounds.
+- Docs: `docs/reference/ai-providers.md` (Topic prompts section), `AGENTS.md` (Prompts line under Generation flows), `docs/backlog/follow-ups.md` F-1 code pointers.
+Deviations from spec (and why):
+- There are no HTTP roadmap edit endpoints; editing exists only as the service functions above (no view calls them). The optional description and its test are on those functions.
+- Builders return text plus system instruction plus schema, not finished messages: `apps.ai.generate_content` assembles the messages (and appends the schema) from those three, and changing that contract was not this pass's job. Each builder still returns its version with them.
+- The roadmap prompt wording is unchanged but is now `roadmap-v1`: `v0` was pass 1's placeholder label, and the prompt has now moved to its versioned home.
+- `description` is a `TextField`, not a short `CharField`: an over-long AI sentence would otherwise fail the whole roadmap insert, against "a bad description never fails the roadmap".
+- `description` is not added to the small `next_topic` / `current_topic` references (title and id only); the spec's list (topic detail, roadmap, preview) is covered.
+- The pipeline still makes a second writer call when the first reply fails domain validation, because the spec requires the task behaviour on `GenerationError` to be unchanged. Normalising first makes that path rarer.
+- Neighbours are found by `order - 1` and `order + 1`. Orders are contiguous by construction (create, append and insert all renumber); a gap left by a manual delete would just mean no neighbour title.
+Open questions for the owner:
+- Should the second writer call on a validation failure go (one call per request, fail straight to `FAILED`)? Kept for now as the spec asked.
+Notes for later passes:
+- Pass 3: the reviewer should get `Topic.description` and the level so "on topic" has the same meaning as the writer's brief. Reviewer and repair prompts go in `apps/learning/prompts.py`; `apps.ai.review_content` currently builds its own messages from `apps/ai/prompts.py`, so pass 3 needs a way to send learning-owned review text through the dispatcher (for example via `generate_content` with action `review`).
+- `docs/backlog/known-bugs.md` #3 still describes the completeness rejections and `FLAGGED`; pass 3 owns that.
 ## Pass 3: not started
 ## Pass 4: not started

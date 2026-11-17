@@ -275,11 +275,11 @@ class TestSendNotification:
         )
         from celery.exceptions import Retry
 
-        with patch("apps.learning.services.generate_content") as gen, patch(
+        with patch("apps.learning.pipeline.generate_content") as gen, patch(
             "apps.learning.tasks.review_content_for_topic.delay"
         ), patch.object(send_notification, "retry", side_effect=Retry()):
             gen.return_value = ai_result({
-                "summary": "A summary.",
+                "summary": " ".join(["word"] * 150),
                 "resource_links": [
                     {"title": "A", "url": "https://a.com", "type": "article"},
                     {"title": "B", "url": "https://b.com", "type": "video"},
@@ -290,7 +290,7 @@ class TestSendNotification:
 
         assert gen.called
         topic.refresh_from_db()
-        assert topic.summary == "A summary."
+        assert topic.summary == " ".join(["word"] * 150)
 
     def test_missing_usp_does_not_crash(self):
         send_notification(99999)

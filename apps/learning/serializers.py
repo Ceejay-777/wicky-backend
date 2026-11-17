@@ -180,6 +180,7 @@ class TopicProgressSerializer(serializers.Serializer):
 class TopicDetailSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Topic ID.")
     title = serializers.CharField(help_text="Topic title.")
+    description = serializers.CharField(help_text="One-sentence goal: what the learner will understand after this topic. May be empty.")
     summary = serializers.CharField(help_text="Generated content summary for this topic.")
     resource_links = serializers.JSONField(help_text="List of external resource links.")
     level = serializers.IntegerField(help_text="Difficulty level (1-3).")
@@ -220,6 +221,7 @@ class EnrolledSubjectListSerializer(serializers.Serializer):
 class SubjectTopicProgressSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Topic ID.")
     title = serializers.CharField(help_text="Topic title.")
+    description = serializers.CharField(help_text="One-sentence goal: what the learner will understand after this topic. May be empty.")
     level = serializers.IntegerField(help_text="Difficulty level (1-3).")
     order = serializers.IntegerField(help_text="Order within the roadmap.")
     content_status = serializers.CharField(help_text="Content generation status.")
@@ -262,6 +264,7 @@ class SubjectPreviewLevelSerializer(serializers.Serializer):
 class SubjectPreviewTopicSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Topic ID.")
     title = serializers.CharField(help_text="Topic title.")
+    description = serializers.CharField(help_text="One-sentence goal: what the learner will understand after this topic. May be empty.")
     level = serializers.IntegerField(help_text="Difficulty level (1-3).")
     order = serializers.IntegerField(help_text="Order within the roadmap.")
 
