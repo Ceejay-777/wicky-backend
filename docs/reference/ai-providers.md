@@ -53,6 +53,7 @@ Every chain step attempt writes one `AIGenerationLog` row (`apps/ai/models.py`):
 
 - Generated resource links are mostly dead or invented: 24 dead, 13 ok, 19 unverifiable of 56 (YouTube 13 dead / 1 ok). See `backlog/follow-ups.md` F-1.
 - About 1 in 5 quiz answer keys disagrees with a blind second model. See F-2.
+- Topic summaries (`topic-v1`) follow the four-paragraph plain-text shape, but one real sample (2026-11-17, level 2, gpt-oss-120b) came in under the 300-word target (284) and leaned conceptual rather than practical for its level. Worth looking at: length, how practical level 2 and 3 summaries are, and how far the last paragraph previews the next topic. A dedicated generation-quality pass will look at this in depth.
 
 ## Limits of the evidence
 

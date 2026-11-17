@@ -66,7 +66,10 @@ Deviations from spec (and why):
 - The pipeline still makes a second writer call when the first reply fails domain validation, because the spec requires the task behaviour on `GenerationError` to be unchanged. Normalising first makes that path rarer.
 - Neighbours are found by `order - 1` and `order + 1`. Orders are contiguous by construction (create, append and insert all renumber); a gap left by a manual delete would just mean no neighbour title.
 Open questions for the owner:
-- Should the second writer call on a validation failure go (one call per request, fail straight to `FAILED`)? Kept for now as the spec asked.
+- Should the second writer call on a validation failure go (one call per request, fail straight to `FAILED`)? Answered 2026-11-17: keep it. Celery does not retry a domain validation failure, so it is the only retry for a well-formed but unusable reply.
+Follow-up, 2026-11-17:
+- Migration `learning/0013_topic_description` applied to the Neon dev DB at the owner's request. Existing topics have a blank `description` (no backfill).
+- One real `topic-v1` generation (level 2 topic, not saved): four plain paragraphs, no cleanup needed, 284 words. Recorded under Known quality gaps in `docs/reference/ai-providers.md`; a separate generation-quality pass will tune it.
 Notes for later passes:
 - Pass 3: the reviewer should get `Topic.description` and the level so "on topic" has the same meaning as the writer's brief. Reviewer and repair prompts go in `apps/learning/prompts.py`; `apps.ai.review_content` currently builds its own messages from `apps/ai/prompts.py`, so pass 3 needs a way to send learning-owned review text through the dispatcher (for example via `generate_content` with action `review`).
 - `docs/backlog/known-bugs.md` #3 still describes the completeness rejections and `FLAGGED`; pass 3 owns that.
