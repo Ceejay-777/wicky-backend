@@ -32,7 +32,7 @@ Done:
 - Callers updated: topic, roadmap, quiz, review, standardize, resolve read `.data` and pass context. Placeholder versions `topic-v0`, `roadmap-v0`, `quiz_normal-v0`, `quiz_advanced-v0`. The topic review annotates its log row with `{"overall_passed": ...}`.
 - Tests: `apps/ai/tests/test_services.py` (rewritten, mocks the httpx client), `apps/ai/tests/test_call_log_admin.py` (retention, import-scan architecture test, admin), `TestReviewOutage` in `apps/learning/tests/test_topic_events.py`. Learning test mocks now return `ai_result(...)` (`apps/ai/tests/helpers.py`).
 - Docs: `AGENTS.md` (AI calls, test quirks), `docs/reference/ai-providers.md` (chain order, failure rules, Call log section), `docs/reference/deployment.md` (beat task, env var), `.env.example`, `docs/backlog/known-bugs.md` #3 (reviewer is no longer primary).
-- Postgres check: `makemigrations --check` reports no changes; `migrate ai --plan` against development settings (the Neon dev DB) plans only `Create model AIGenerationLog`; `sqlmigrate ai 0002` output reviewed (table plus the six indexes). Not applied to the shared dev DB.
+- Postgres check: `makemigrations --check` reports no changes; `migrate ai --plan` against development settings (the Neon dev DB) plans only `Create model AIGenerationLog`; `sqlmigrate ai 0002` output reviewed (table plus the six indexes). Applied to the Neon dev DB on 2026-11-17 at the owner's request (`migrate ai`: OK; table readable through `ai_log`).
 Deviations from spec (and why):
 - Rollback-proof logging uses a second database alias, `ai_log` (same database, own connection, `config/utils/db_routers.py`). Django has no other way to write outside the caller's transaction. In tests `ai_log` is a separate in-memory SQLite DB, because SQLite cannot give a second connection to the same in-memory DB its own write transaction; tests touching the log mark `databases=["default", "ai_log"]`.
 - Review, standardize and resolve take `context` but not `prompt_version`: their prompt text lives in `apps/ai/prompts.py`, so their versions are constants there (`review-v0`, `standardize-v0`, `resolve-v0`). A caller passing a version for text it does not own could drift from the text. `generate_content` callers own their prompts and must pass one. The dispatcher itself requires both.
@@ -40,7 +40,6 @@ Deviations from spec (and why):
 - The learning-side tests of `apps.ai` internals (`TestAIReviewContent`, `TestAIGenerateContent`) were removed; their coverage now lives in `apps/ai/tests`. The "learning schemas are Gemini-safe" test moved from `apps/ai/tests` to `apps/learning/tests/test_content_generation.py`, because the import scan covers test files too.
 - Test settings use plain `StaticFilesStorage` so admin pages render without `collectstatic`.
 Open questions for the owner:
-- Apply `ai/0002_aigenerationlog` to the Neon dev DB yourself (`python manage.py migrate`), or should the next pass do it?
 - The `ai_log` alias doubles Postgres connections per process (two instead of one). Fine at current scale; say if the Neon pooler limits matter.
 Notes for later passes:
 - `build_quiz` retries the whole AI call inside the task on `ProviderError` as well as `GenerationError`, so one quiz can call the chain twice before Celery retries. Quizzes are out of scope here; worth a follow-up.
