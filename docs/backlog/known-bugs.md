@@ -8,7 +8,6 @@ Severity: **High** (security / data integrity) · **Medium** · **Low**
 |---|---|---|---|
 | 1 | Medium | Validation | `answers` accepts booleans; `notification-frequency` unchecked |
 | 2 | Medium | Throttle | Authenticated users are not throttled (`user` rate defined, `UserRateThrottle` not enabled) |
-| 3 | Low | AI quality | Reviewer falsely rejects good content ~2 in 8 runs |
 | 4 | Low | Misc | Small issues, list below |
 
 ## 1. Input validation
@@ -19,8 +18,8 @@ Severity: **High** (security / data integrity) · **Medium** · **Low**
 ## 2. No authenticated throttle
 `DEFAULT_THROTTLE_CLASSES` has only `AnonRateThrottle`, so the `'user': '100/hour'` rate is unused. Decide whether quiz generate (it spends AI tokens) needs its own scoped throttle.
 
-## 3. Reviewer false rejections
-Reviewer `qwen/qwen3.8-27b` (primary until the review chain was reordered to gpt-oss-120b first) rejected known-good text 2 of 8 runs, both on "completeness". A rejection triggers regeneration (up to 2 attempts, then `FLAGGED`). Consider a softer completeness criterion or requiring two failing axes.
+## 3. Reviewer false rejections (closed 2026-11-17)
+Replaced by the narrow review: only off-topic or quoted, verified factual errors count, and errors are repaired rather than regenerated (`docs/reference/ai-providers.md`, Topic review and repair).
 
 ## 4. Small issues
 - Dead AI-generated links and wrong link `type` labels (see F-1).

@@ -117,16 +117,6 @@ class TestMessageBuilders:
         assert "Be educational" in messages[0]["content"]
         assert "Respond with valid JSON" in messages[1]["content"]
 
-    def test_build_review_messages(self):
-        from apps.ai.prompts import build_review_messages
-        messages = build_review_messages(
-            content="Some content",
-            criteria={"topic_title": "AI", "subject_name": "CS"},
-        )
-        assert len(messages) == 2
-        assert "AI" in messages[1]["content"]
-        assert "CS" in messages[1]["content"]
-
     def test_build_resolve_messages(self):
         from apps.ai.prompts import build_resolve_messages
         messages = build_resolve_messages(

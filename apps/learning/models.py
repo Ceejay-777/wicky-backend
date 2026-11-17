@@ -44,10 +44,14 @@ class Topic(models.Model):
         FAILED = "FAILED", "Failed"
 
     class ReviewStatus(models.TextChoices):
-        PENDING = "PENDING", "Pending"
-        PASSED = "PASSED", "Passed"
-        FAILED = "FAILED", "Failed"
-        FLAGGED = "FLAGGED", "Flagged"
+        PENDING = "PENDING", "Pending"  # not reviewed yet
+        PASSED = "PASSED", "Passed"  # on topic, no verified issues
+        FIXED = "FIXED", "Fixed"  # verified issues found and repaired
+        UNREVIEWED = "UNREVIEWED", "Unreviewed"  # review or repair could not finish
+        REJECTED = "REJECTED", "Rejected"  # off topic twice; topic FAILED
+
+    # Content is shown to learners only in these review states.
+    VISIBLE_REVIEW_STATUSES = (ReviewStatus.PASSED, ReviewStatus.FIXED, ReviewStatus.UNREVIEWED)
 
     subject = models.ForeignKey(
         Subject, on_delete=models.CASCADE, related_name="topics"
@@ -65,7 +69,10 @@ class Topic(models.Model):
     review_status = models.CharField(
         max_length=16, choices=ReviewStatus.choices, default=ReviewStatus.PENDING
     )
-    review_attempts = models.PositiveSmallIntegerField(default=0)
+    # Off-topic regenerations in the current cycle (D7 allows one); the retry endpoint resets it.
+    regeneration_count = models.PositiveSmallIntegerField(default=0)
+    # Interpreted review: {"on_topic", "reason", "issues": [{quote, problem, correction}], "dropped"}.
+    review_verdict = models.JSONField(null=True, blank=True)
     generation_started_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

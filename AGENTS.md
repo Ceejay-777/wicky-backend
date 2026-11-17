@@ -51,7 +51,8 @@ python manage.py seed_subjects | seed_demo   # seed data; see docs/reference/liv
 ## Generation flows (do not bypass)
 
 - **Topic content:** start it only through `request_topic_generation(topic_id)` (atomic `NOT_GENERATED -> GENERATING` claim; the task never claims). `GET /topics/<id>` triggers it for the opened topic and the next two; `FAILED` topics restart only via `POST /topics/<id>/retry`.
-- **Prompts:** roadmap and topic prompt text, schemas and versions live only in `apps/learning/prompts.py`; any wording change bumps that prompt's version. Topic generation runs through `apps/learning/pipeline.py` (the task only calls it).
+- **Prompts:** roadmap, topic, review and repair prompt text, schemas and versions live only in `apps/learning/prompts.py`; any wording change bumps that prompt's version.
+- **Topic pipeline** (`apps/learning/pipeline.py`): three stages, one thin Celery task each: generate, review, repair. Each stage persists its result before queuing the next, and does nothing if the topic is not in its stage's state (redelivery is safe). The review checks only on-topic and quoted factual errors; code drops issues whose quote is not in the summary. Kept issues get one repair (no re-review); off topic regenerates once (`regeneration_count`), then `FAILED`/`REJECTED`. Review or repair outage: Celery retries, then the original is published `UNREVIEWED`. `review_status` is `PENDING`, `PASSED`, `FIXED`, `UNREVIEWED` or `REJECTED`; content is shown only for `PASSED`, `FIXED` and `UNREVIEWED`. See `docs/reference/ai-providers.md`.
 - **Roadmap:** async. `POST /subjects/create` enrolls immediately and queues `generate_roadmap_for_subject`; `POST /subjects/<id>/roadmap/retry` retries.
 - **Status is pushed over SSE, but the DB is the source of truth.** Events are not replayable; clients must also GET.
 - **Topic access:** every topic endpoint goes through `get_accessible_topic` (404 not enrolled, 403 level locked).

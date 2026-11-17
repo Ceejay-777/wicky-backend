@@ -12,7 +12,7 @@ Code: `apps/ai/services.py` (`_ACTION_CHAINS`, `_MAX_COMPLETION_TOKENS`, `genera
 
 | Action | Chain (model, effort) |
 |---|---|
-| `roadmap`, `topic` | gpt-oss-120b (medium), qwen3.8-27b, gpt-oss-20b (medium) |
+| `roadmap`, `topic`, `topic_repair` | gpt-oss-120b (medium), qwen3.8-27b, gpt-oss-20b (medium) |
 | `review` | gpt-oss-120b (medium), qwen3.8-27b (thinking on), gpt-oss-20b (medium) |
 | `quiz_normal` | gpt-oss-120b (low), gpt-oss-20b (low), qwen3.8-27b |
 | `quiz_advanced` | gpt-oss-120b (medium), gpt-oss-20b (medium), qwen3.8-27b |
@@ -28,17 +28,36 @@ Every chain step attempt writes one `AIGenerationLog` row (`apps/ai/models.py`):
 
 - Written by the dispatcher (`apps/ai/calllog.py`), never by callers. A failed log write goes to Sentry and never breaks the call.
 - Rows go through a second database connection (`ai_log` alias, same database, `config/utils/db_routers.py`), so a failed call is still recorded when the caller's transaction rolls back.
-- Callers may attach what they made of a call with `annotate_outcome(log_id, ...)` (the topic review stores `overall_passed`).
+- Callers may attach what they made of a call with `annotate_outcome(log_id, ...)` (the topic review stores its interpreted verdict; the repair stores `{"repair": "repaired"}` or `{"repair": "invalid", "reason": ...}`).
 - Browse and judge rows in Django admin (`/admin/ai/aigenerationlog/`): only `human_verdict` and `human_note` are editable.
 - Retention: `ai.delete_old_generation_logs` runs daily and deletes rows older than `AI_LOG_RETENTION_DAYS` (default 90) in batches.
 
 ## Topic prompts
 
-- Roadmap and topic prompt text, system instructions, schemas and versions live in `apps/learning/prompts.py`. Builders there are pure (plain values in, `Prompt` out: text, system instruction, schema, version). Quiz prompts are still in `apps/learning/services.py`. Review, standardize and resolve prompts are in `apps/ai/prompts.py`.
+- Roadmap, topic, review and repair prompt text, system instructions, schemas and versions live in `apps/learning/prompts.py` (`roadmap-v1`, `topic-v1`, `review-v1`, `topic_repair-v1`). Builders there are pure (plain values in, `Prompt` out: text, system instruction, schema, version). All of them go through `apps.ai.generate_content` with their own action. Quiz prompts are still in `apps/learning/services.py`. Standardize and resolve prompts are in `apps/ai/prompts.py`.
 - Every prompt has a version label (`topic-v1`, `roadmap-v1`, ...), recorded on each log row. Any wording change bumps the version, so log rows can be compared across prompt versions.
 - The topic writer gets the subject, title, the topic's goal sentence (`Topic.description`, from the roadmap; may be blank), its level and what that level's reader knows, and the previous and next topic titles (do not re-teach the previous one, do not cover the next one).
 - The summary is four plain paragraphs, in order: what it is; key terms and ideas; one concrete example or analogy; why it matters and what it leads to. Plain text, paragraphs separated by one blank line, no markdown, 300-500 words. The frontend splits on newlines and renders no markdown (`toParagraphs` in `wicky-frontend/apps/web/src/lib/learning/reading.ts`).
 - The topic pipeline (`apps/learning/pipeline.py`) normalises the summary in code (strips heading, bullet, bold and italic markers; collapses blank lines; straightens smart quotes) and then rejects only an empty summary or one outside 120-900 words (`SUMMARY_MIN_WORDS`, `SUMMARY_MAX_WORDS`). Paragraph count is not checked.
+
+## Topic review and repair
+
+Code: `apps/learning/pipeline.py`, one Celery task per stage in `apps/learning/tasks.py` (generate, review, repair). Each stage persists its result before the next is queued, and a task that finds the topic outside its stage's state does nothing, so a redelivered task never repeats an AI call.
+
+- **Review is narrow.** The reviewer gets the same brief as the writer (subject, title, goal, level and its reader, neighbouring titles) and the summary, never the resource links. It answers two questions only: is the summary on topic (yes or no, one-sentence reason), and which statements are clearly factually wrong, each with the exact sentence quoted, the problem and a corrected sentence. Style, tone, reading level, omissions and depth are not issues; those are writer instructions.
+- **No quote, no rejection.** Code keeps an issue only when its quote appears in the summary (compared ignoring case, whitespace and curly vs straight quotes) and its quote, problem and correction are all non-empty; duplicate quotes count once. The result is stored on the topic (`Topic.review_verdict`: on-topic flag, reason, kept issues, dropped count) and on the review call's log row.
+- **Decisions.** On topic with no kept issues: `PASSED`. On topic with kept issues: one `topic_repair` call (writer chain) that changes only what the issues require; the result is normalised and validated like a generated summary; valid gives `FIXED`, invalid keeps the original as `UNREVIEWED`. A repaired summary is not reviewed again. Off topic (even with issues): regenerate once (`Topic.regeneration_count`), and off topic again gives `FAILED` with `REJECTED`.
+- **Outages are not verdicts.** A review or repair outage raises `ProviderError` and Celery retries; when retries run out the original is published as `UNREVIEWED`. A generation outage still retries and then sets `FAILED` with review status `PENDING`, which the hourly sweeper requeues. A topic stuck in review or repair for an hour is published as `UNREVIEWED`.
+
+| `review_status` | Meaning | Content shown? |
+|---|---|---|
+| `PENDING` | Not reviewed yet (new, generating, or waiting for review) | No |
+| `PASSED` | On topic, no verified issues | Yes |
+| `FIXED` | Verified issues found and repaired | Yes |
+| `UNREVIEWED` | Review or repair could not complete; original published | Yes |
+| `REJECTED` | Off topic twice; topic `FAILED` | No |
+
+`GET /topics/<id>` returns an empty `summary` and `resource_links` unless the status is `PASSED`, `FIXED` or `UNREVIEWED`. `POST /topics/<id>/retry` resets the regeneration count and verdict and starts a new cycle (also for `REJECTED`).
 
 ## Why these settings (evidence, 2026-10-14)
 
@@ -47,7 +66,7 @@ Every chain step attempt writes one `AIGenerationLog` row (`apps/ai/models.py`):
 - **Typical latency:** roadmap ~4s, topic ~3s, quiz 2-7s, review/standardize/resolve 1.5-2.5s. Gemini text generation was 30-270s (hidden thinking tokens, 503 retries up to 600s, 20 req/day free-tier cap), which is why it was dropped.
 - **Qwen last for quizzes:** weakest answer-key agreement on normal quizzes (67%); returned `503 over capacity` in some runs.
 - **Subject cleanup/matching:** 100% correct on all test cases, including a prompt-injection input.
-- **Review:** no model passed wrong or off-topic text; the only errors were over-strict rejections of good text (see known bugs, reviewer false rejections).
+- **Review:** no model passed wrong or off-topic text; the only errors were over-strict rejections of good text on "completeness" (the old four-axis review). That review was replaced by the narrow, quote-checked review above.
 
 ## Known quality gaps (not solved by model choice)
 

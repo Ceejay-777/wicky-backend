@@ -665,13 +665,14 @@ class TestRetryTopicView:
     def test_failed_topic_is_restarted(self, auth_client, subject, enrolled):
         topic = Topic.objects.filter(subject=subject).first()
         Topic.objects.filter(id=topic.id).update(
-            content_status="FAILED", review_status="FLAGGED", review_attempts=2,
+            content_status="FAILED", review_status="REJECTED", regeneration_count=1,
+            review_verdict={"on_topic": False, "reason": "x", "issues": [], "dropped": 0},
         )
         resp = auth_client.post(self._url(subject))
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["data"] == {"content_status": "GENERATING"}
         topic.refresh_from_db()
-        assert (topic.review_attempts, topic.review_status) == (0, "PENDING")
+        assert (topic.regeneration_count, topic.review_status, topic.review_verdict) == (0, "PENDING", None)
         self.delay.assert_called_once_with(topic.id)
 
     def test_running_or_ready_topic_is_a_noop(self, auth_client, subject, enrolled):

@@ -263,6 +263,12 @@ def roadmap():
 
 @pytest.mark.django_db(databases=["default", "ai_log"])
 class TestPipeline:
+    @pytest.fixture(autouse=True)
+    def claimed(self, roadmap):
+        Topic.objects.filter(subject=roadmap[0]).update(content_status=Topic.ContentStatus.GENERATING)
+        with patch("apps.learning.tasks.review_content_for_topic.delay"):
+            yield
+
     def test_messages_carry_level_goal_and_neighbours(self, roadmap):
         _, topics = roadmap
         red_giants = topics[2]

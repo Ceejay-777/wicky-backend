@@ -44,7 +44,8 @@ class TestTopicModel:
         assert topic.resource_links == []
         assert topic.content_status == Topic.ContentStatus.NOT_GENERATED
         assert topic.review_status == Topic.ReviewStatus.PENDING
-        assert topic.review_attempts == 0
+        assert topic.regeneration_count == 0
+        assert topic.review_verdict is None
         assert topic.created_at is not None
 
     def test_topic_subject_order_unique(self):

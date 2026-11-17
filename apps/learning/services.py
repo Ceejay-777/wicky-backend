@@ -199,6 +199,11 @@ def ensure_topic_content_ready(topic_id: int) -> bool:
     ).update(
         content_status=Topic.ContentStatus.GENERATING,
         generation_started_at=timezone.now(),
+        # A claim starts a generation: clear the last one's output and verdict.
+        summary="",
+        resource_links=[],
+        review_status=Topic.ReviewStatus.PENDING,
+        review_verdict=None,
     )
     return updated > 0
 
@@ -226,22 +231,6 @@ def request_topic_generation(topic_id: int) -> bool:
         publish_topic_status(topic_id)
         return False
     return True
-
-
-def review_topic_content(topic_id: int) -> bool:
-    """Raises ProviderError when every review step fails (an outage, not a verdict)."""
-    from apps.ai.calllog import annotate_outcome
-    from apps.ai.services import review_content as ai_review
-
-    topic = Topic.objects.get(id=topic_id)
-    result = ai_review(
-        content=topic.summary,
-        criteria={"topic_title": topic.title, "subject_name": topic.subject.name},
-        context={"topic_id": topic.id, "subject_id": topic.subject_id},
-    )
-    passed = result.data["overall_passed"]
-    annotate_outcome(result.log_id, {"overall_passed": passed})
-    return passed
 
 
 def ensure_buffer_ahead(topic: Topic) -> None:
@@ -1224,16 +1213,17 @@ def prefetch_topic_content(topic: Topic) -> None:
     """
     request_topic_generation(topic.id)
     ensure_buffer_ahead(topic)
-    topic.refresh_from_db(fields=["content_status"])
+    topic.refresh_from_db(fields=["content_status", "review_status", "summary", "resource_links"])
 
 
 def retry_topic(user, topic_id: int) -> Topic:
-    """Restart generation for a FAILED topic. A no-op while it is running or ready."""
+    """Restart generation for a FAILED topic (REJECTED included). A no-op while running or ready."""
     topic = get_accessible_topic(user, topic_id)
     Topic.objects.filter(id=topic.id, content_status=Topic.ContentStatus.FAILED).update(
         content_status=Topic.ContentStatus.NOT_GENERATED,
         review_status=Topic.ReviewStatus.PENDING,
-        review_attempts=0,
+        review_verdict=None,
+        regeneration_count=0,
         generation_started_at=None,
     )
     request_topic_generation(topic.id)

@@ -10,14 +10,12 @@ from django.test import override_settings
 from apps.ai.calllog import annotate_outcome
 from apps.ai.exceptions import ProviderError, ResponseShapeError
 from apps.ai.models import AIGenerationLog
-from apps.ai.prompts import REVIEW_SCHEMA
 from apps.ai.services import (
     _ACTION_CHAINS,
     _MAX_COMPLETION_TOKENS,
     _is_retryable_error,
     _validate_shape,
     generate_content,
-    review_content,
     standardize_subject_name,
 )
 
@@ -29,13 +27,6 @@ SCHEMA = {
     "required": ["answer"],
 }
 GOOD = {"answer": "42"}
-REVIEW_OK = {
-    "accuracy": {"pass": True, "note": "OK"},
-    "audience_fit": {"pass": True, "note": "OK"},
-    "relevance": {"pass": True, "note": "OK"},
-    "completeness": {"pass": True, "note": "OK"},
-    "overall_passed": True,
-}
 USAGE = {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
 
 
@@ -284,32 +275,12 @@ class TestCallLog:
 
 
 # ---------------------------------------------------------------------------
-# Review and other public functions
+# Other public functions
 # ---------------------------------------------------------------------------
 
 
 @LOG_DB
-class TestReviewContent:
-    def test_returns_result_on_success(self):
-        patcher, _ = fake_groq(reply(REVIEW_OK))
-        with patcher:
-            result = review_content("Some content", context={"topic_id": 1})
-        assert result.data["overall_passed"] is True
-        assert rows()[0].prompt_version == "review-v0"
-
-    def test_outage_raises_and_returns_no_fake_result(self):
-        patcher, _ = fake_groq(*[reply({}, status=503)] * 3)
-        with patcher, pytest.raises(ProviderError):
-            review_content("Some content", context={"topic_id": 1})
-        assert len(rows()) == 3
-
-    def test_malformed_review_moves_to_next_step_not_a_retry_loop(self):
-        patcher, client = fake_groq(reply({"accuracy": {"pass": True, "note": "OK"}}), reply(REVIEW_OK))
-        with patcher:
-            result = review_content("Some content", context={})
-        assert result.steps_tried == 2
-        assert [p["model"] for p in client.payloads] == ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
-
+class TestOtherPublicFunctions:
     def test_standardize_uses_its_own_chain(self):
         patcher, client = fake_groq(reply({"standardized_name": "X", "is_specific": True}))
         with patcher:
@@ -325,6 +296,7 @@ class TestActionChains:
     EXPECTED = {
         "roadmap": [("openai/gpt-oss-120b", "medium"), ("qwen/qwen3.8-27b", None), ("openai/gpt-oss-20b", "medium")],
         "topic": [("openai/gpt-oss-120b", "medium"), ("qwen/qwen3.8-27b", None), ("openai/gpt-oss-20b", "medium")],
+        "topic_repair": [("openai/gpt-oss-120b", "medium"), ("qwen/qwen3.8-27b", None), ("openai/gpt-oss-20b", "medium")],
         "review": [("openai/gpt-oss-120b", "medium"), ("qwen/qwen3.8-27b", "default"), ("openai/gpt-oss-20b", "medium")],
         "quiz_normal": [("openai/gpt-oss-120b", "low"), ("openai/gpt-oss-20b", "low"), ("qwen/qwen3.8-27b", None)],
         "quiz_advanced": [("openai/gpt-oss-120b", "medium"), ("openai/gpt-oss-20b", "medium"), ("qwen/qwen3.8-27b", None)],
@@ -357,22 +329,37 @@ class TestActionChains:
 # ---------------------------------------------------------------------------
 
 
+NESTED_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "check": {
+            "type": "object",
+            "properties": {"pass": {"type": "boolean"}, "note": {"type": "string"}},
+            "required": ["pass", "note"],
+        },
+        "done": {"type": "boolean"},
+    },
+    "required": ["check", "done"],
+}
+NESTED_OK = {"check": {"pass": True, "note": "OK"}, "done": True}
+
+
 class TestValidateShape:
     def test_passes_valid_data(self):
-        _validate_shape(REVIEW_OK, REVIEW_SCHEMA)
+        _validate_shape(NESTED_OK, NESTED_SCHEMA)
 
     def test_fails_on_missing_key(self):
         with pytest.raises(ResponseShapeError, match="Missing required key"):
-            _validate_shape({"accuracy": {"pass": True, "note": "OK"}}, REVIEW_SCHEMA)
+            _validate_shape({"check": {"pass": True, "note": "OK"}}, NESTED_SCHEMA)
 
     def test_fails_on_wrong_type(self):
-        data = {**REVIEW_OK, "accuracy": {"pass": "yes", "note": "OK"}}
+        data = {**NESTED_OK, "check": {"pass": "yes", "note": "OK"}}
         with pytest.raises(ResponseShapeError, match="expected boolean"):
-            _validate_shape(data, REVIEW_SCHEMA)
+            _validate_shape(data, NESTED_SCHEMA)
 
     def test_fails_on_non_object_top_level(self):
         with pytest.raises(ResponseShapeError, match="Expected object"):
-            _validate_shape("not a dict", REVIEW_SCHEMA)
+            _validate_shape("not a dict", NESTED_SCHEMA)
 
     def test_validates_nested_array_items(self):
         schema = {

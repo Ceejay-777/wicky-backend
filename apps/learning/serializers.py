@@ -177,16 +177,23 @@ class TopicProgressSerializer(serializers.Serializer):
     next_topic = NextTopicSerializer(allow_null=True, help_text="The next topic in the roadmap, or null at the end.")
 
 
+REVIEW_STATUS_HELP = (
+    "Content review status: PENDING (not reviewed yet), PASSED (reviewed, no issues), "
+    "FIXED (verified errors repaired), UNREVIEWED (review could not finish; content shown "
+    "anyway) or REJECTED (off topic twice; content_status is FAILED)."
+)
+
+
 class TopicDetailSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Topic ID.")
     title = serializers.CharField(help_text="Topic title.")
     description = serializers.CharField(help_text="One-sentence goal: what the learner will understand after this topic. May be empty.")
-    summary = serializers.CharField(help_text="Generated content summary for this topic.")
-    resource_links = serializers.JSONField(help_text="List of external resource links.")
+    summary = serializers.CharField(help_text="Generated summary, plain paragraphs. Empty unless review_status is PASSED, FIXED or UNREVIEWED.")
+    resource_links = serializers.JSONField(help_text="External resource links. Empty unless review_status is PASSED, FIXED or UNREVIEWED.")
     level = serializers.IntegerField(help_text="Difficulty level (1-3).")
     order = serializers.IntegerField(help_text="Order within the subject's roadmap.")
     content_status = serializers.CharField(help_text="Content generation status.")
-    review_status = serializers.CharField(help_text="Content review status.")
+    review_status = serializers.CharField(help_text=REVIEW_STATUS_HELP)
     subject_id = serializers.IntegerField(help_text="Parent subject ID.")
     subject_name = serializers.CharField(help_text="Parent subject name.")
     progress = TopicProgressSerializer(help_text="The current user's progress on this topic.")
@@ -225,7 +232,7 @@ class SubjectTopicProgressSerializer(serializers.Serializer):
     level = serializers.IntegerField(help_text="Difficulty level (1-3).")
     order = serializers.IntegerField(help_text="Order within the roadmap.")
     content_status = serializers.CharField(help_text="Content generation status.")
-    review_status = serializers.CharField(help_text="Content review status.")
+    review_status = serializers.CharField(help_text=REVIEW_STATUS_HELP)
     user_progress_status = serializers.CharField(allow_null=True, help_text="User's progress on this topic, or null if not started.")
     is_passed = serializers.BooleanField(help_text="Whether the user has passed this topic.")
     advanced_passed = serializers.BooleanField(help_text="Whether the user has passed the advanced quiz.")

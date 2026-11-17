@@ -8,6 +8,8 @@ from dataclasses import dataclass
 
 TOPIC_PROMPT_VERSION = "topic-v1"
 ROADMAP_PROMPT_VERSION = "roadmap-v1"
+REVIEW_PROMPT_VERSION = "review-v1"
+REPAIR_PROMPT_VERSION = "topic_repair-v1"
 
 
 @dataclass(frozen=True)
@@ -118,6 +120,32 @@ LEVEL_READERS = {
 }
 
 
+FORMAT_RULES = (
+    "Format: plain text only. Separate paragraphs with one blank line. No headings, "
+    "no bullet points, no lists, no markdown symbols (such as #, * or _). Do not "
+    "number the paragraphs."
+)
+
+
+def _brief_lines(
+    level: int, goal: str, previous_title: str | None, next_title: str | None
+) -> list[str]:
+    """The topic's brief, shared by writer, reviewer and repairer so "on topic" means one thing."""
+    lines = [f"Level {level} of 3. The reader is {LEVEL_READERS[level]}"]
+    if goal.strip():
+        lines.append(f"Goal of this topic: {goal.strip()}")
+    if previous_title:
+        lines.append(
+            f"The previous topic was '{previous_title}'. Do not re-teach it in depth; "
+            f"a brief reference is enough."
+        )
+    if next_title:
+        lines.append(
+            f"The next topic is '{next_title}'. Do not cover it; it has its own summary."
+        )
+    return lines
+
+
 def build_topic_prompt(
     *,
     subject_name: str,
@@ -130,20 +158,9 @@ def build_topic_prompt(
     lines = [
         f"Write an educational summary of the topic '{title}' in the subject '{subject_name}'.",
         "",
-        f"Level {level} of 3. The reader is {LEVEL_READERS[level]}",
+        *_brief_lines(level, goal, previous_title, next_title),
     ]
     goal = goal.strip()
-    if goal:
-        lines.append(f"Goal of this topic: {goal}")
-    if previous_title:
-        lines.append(
-            f"The previous topic was '{previous_title}'. Do not re-teach it in depth; "
-            f"a brief reference is enough."
-        )
-    if next_title:
-        lines.append(
-            f"The next topic is '{next_title}'. Do not cover it; it has its own summary."
-        )
     scope = (
         "Cover everything the goal promises and stay inside this topic's boundaries."
         if goal
@@ -158,9 +175,7 @@ def build_topic_prompt(
         "3. One small concrete example or analogy.",
         "4. Why it matters in this subject, and how it connects to what comes next.",
         "",
-        "Format: plain text only. Separate paragraphs with one blank line. No headings, "
-        "no bullet points, no lists, no markdown symbols (such as #, * or _). Do not "
-        "number the paragraphs.",
+        FORMAT_RULES,
         "Length: 300-500 words in total.",
         "",
         "Also provide 2-5 carefully chosen external resource links. Prefer Wikipedia for "
@@ -173,4 +188,120 @@ def build_topic_prompt(
         TOPIC_CONTENT_SYSTEM_INSTRUCTION,
         TOPIC_CONTENT_SCHEMA,
         TOPIC_PROMPT_VERSION,
+    )
+
+
+# --- Review ------------------------------------------------------------------
+
+REVIEW_SYSTEM_INSTRUCTION = (
+    "You check summaries on a learning platform for two things only: whether the summary "
+    "is about its topic, and whether it states something clearly false. You are not an "
+    "editor. Most summaries have no issues, and an empty issue list is the normal answer."
+)
+
+REVIEW_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "on_topic": {"type": "boolean"},
+        "reason": {"type": "string"},
+        "issues": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "quote": {"type": "string"},
+                    "problem": {"type": "string"},
+                    "correction": {"type": "string"},
+                },
+                "required": ["quote", "problem", "correction"],
+            },
+        },
+    },
+    "required": ["on_topic", "reason", "issues"],
+}
+
+
+def build_review_prompt(
+    *,
+    subject_name: str,
+    title: str,
+    level: int,
+    summary: str,
+    goal: str = "",
+    previous_title: str | None = None,
+    next_title: str | None = None,
+) -> Prompt:
+    lines = [
+        f"Check this summary of the topic '{title}' in the subject '{subject_name}'.",
+        "",
+        "The writer was given this brief:",
+        *_brief_lines(level, goal, previous_title, next_title),
+        "",
+        "Summary:",
+        summary,
+        "",
+        "Answer two questions.",
+        "1. on_topic: is the summary about this topic, within its level and boundaries? "
+        "Give a one-sentence reason.",
+        "2. issues: list only statements that are clearly factually wrong. For each, copy "
+        "the exact sentence from the summary, word for word, as the quote; say what is "
+        "wrong as the problem; and give a corrected sentence as the correction.",
+        "",
+        "Do not report style, tone, reading level, omissions, missing depth, ordering or "
+        "preferences. Those are not issues. If nothing is clearly wrong, return an empty "
+        "issues list.",
+    ]
+    return Prompt(
+        "\n".join(lines), REVIEW_SYSTEM_INSTRUCTION, REVIEW_SCHEMA, REVIEW_PROMPT_VERSION
+    )
+
+
+# --- Repair ------------------------------------------------------------------
+
+REPAIR_SYSTEM_INSTRUCTION = (
+    "You correct factual errors in educational summaries. You change only what each "
+    "listed issue requires and keep everything else word for word."
+)
+
+REPAIR_SCHEMA = {
+    "type": "object",
+    "properties": {"summary": {"type": "string"}},
+    "required": ["summary"],
+}
+
+
+def build_repair_prompt(
+    *,
+    subject_name: str,
+    title: str,
+    level: int,
+    summary: str,
+    issues: list[dict],
+    goal: str = "",
+    previous_title: str | None = None,
+    next_title: str | None = None,
+) -> Prompt:
+    listed = [
+        f"- Sentence: {i['quote']}\n  Problem: {i['problem']}\n  Correction: {i['correction']}"
+        for i in issues
+    ]
+    lines = [
+        f"Correct this summary of the topic '{title}' in the subject '{subject_name}'.",
+        "",
+        "The summary was written to this brief:",
+        *_brief_lines(level, goal, previous_title, next_title),
+        "",
+        "Summary:",
+        summary,
+        "",
+        "A reviewer found these factual errors:",
+        *listed,
+        "",
+        "Fix each error. Change only what the errors require and keep everything else "
+        "word for word where possible. Keep the same paragraphs.",
+        FORMAT_RULES,
+        "Return the whole corrected summary.",
+    ]
+    return Prompt(
+        "\n".join(lines), REPAIR_SYSTEM_INSTRUCTION, REPAIR_SCHEMA, REPAIR_PROMPT_VERSION
     )

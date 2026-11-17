@@ -72,7 +72,7 @@ The codebase originated from the opencore community as a large-language-model co
 
 ### Phase 3 — Topic Content
 - LLM generates summaries + resource links with JSON schema validation
-- Content review pipeline with retry logic; failed content auto-regenerates
+- Content review pipeline: off-topic content regenerates once, quoted factual errors are repaired, outages publish unreviewed
 - Pre-generation: next 2 topics buffered in background
 
 ### Phase 4 — Topic Progression
@@ -218,7 +218,7 @@ apps/
 │   ├── models.py
 │   └── views.py
 ├── ai/                 # AI provider abstraction (Gemini, Groq)
-│   ├── services.py         # generate_content, review_content, etc.
+│   ├── services.py         # generate_content, rank_or_resolve, etc.
 │   └── providers.py        # Provider selection + failover
 └── learning/           # Subjects, roadmaps, topics, quizzes, leaderboard
     ├── models.py           # Subject, Topic, TopicProgress, QuizAttempt, etc.

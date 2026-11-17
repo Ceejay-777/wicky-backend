@@ -13,6 +13,7 @@ One entry per item, numbered `F-n`, never reused. Status: `Open`, `In progress`,
 | F-6 | Testing | Open | Opt-in live smoke test; E2E in CI with real pgvector; verify Sentry fires |
 | F-7 | Performance | Open (when needed) | HNSW index on `Subject.embedding`; cache explore/suggestions; one Celery retry config |
 | F-8 | Product | Open (post-MVP) | Sub-topic suggestions for very broad subjects |
+| F-9 | Content quality | Open | Re-review `UNREVIEWED` topics later |
 
 ## F-1. Resource links are mostly dead or invented
 56 checked links: 24 dead, 13 ok, 19 unverifiable (YouTube 13 dead / 1 ok; recipe/blog deep links dead; kubernetes.io 7/7 ok). Nothing checks them, including the reviewer.
@@ -42,3 +43,6 @@ HNSW index on `Subject.embedding`, a pgvector performance test, cache on explore
 
 ## F-8. Broad-topic suggestions
 When a user enters a very broad subject ("Biology"), return several narrower options instead of one. Extends the `narrow` action of `resolve_or_create_subject`.
+
+## F-9. Re-review UNREVIEWED topics
+A topic whose review or repair could not complete (outage, stuck past the sweeper cutoff) is published as `UNREVIEWED`. Nothing reviews it later. Option: a periodic task that runs the review stage on `UNREVIEWED` topics when the review chain is healthy, without hiding content that is already shown. Not built.

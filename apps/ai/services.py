@@ -1,7 +1,7 @@
 """
 AI Provider Service Layer
 
-One function per role -- generate, review, embed, rank/resolve -- keeping
+One function per role -- generate, embed, rank/resolve -- keeping
 provider-specific code contained here so swapping providers later is a
 config change, not a rewrite.
 
@@ -28,13 +28,10 @@ from .models import AIGenerationLog
 from .prompts import (
     RESOLVE_PROMPT_VERSION,
     RESOLVE_SCHEMA,
-    REVIEW_PROMPT_VERSION,
-    REVIEW_SCHEMA,
     STANDARDIZE_NAME_SCHEMA,
     STANDARDIZE_PROMPT_VERSION,
     build_generation_messages,
     build_resolve_messages,
-    build_review_messages,
     build_standardize_messages,
 )
 from .providers import (
@@ -174,6 +171,7 @@ _LONG_FORM_CHAIN = [
 _ACTION_CHAINS: dict[str, list[ChainStep]] = {
     "roadmap": _LONG_FORM_CHAIN,
     "topic": _LONG_FORM_CHAIN,
+    "topic_repair": _LONG_FORM_CHAIN,
     "review": [
         ChainStep("groq", _GPT_OSS_120B, "medium"),
         ChainStep("groq", _QWEN, "default"),  # thinking on
@@ -205,6 +203,7 @@ _ACTION_CHAINS: dict[str, list[ChainStep]] = {
 _MAX_COMPLETION_TOKENS: dict[str, int] = {
     "roadmap": 8192,
     "topic": 8192,
+    "topic_repair": 8192,
     "quiz_normal": 8192,
     "quiz_advanced": 8192,
     "review": 4096,
@@ -420,7 +419,7 @@ def generate_content(
     prompt_version: str,
     context: dict,
 ) -> AIResult:
-    """Generate content for ``action`` (roadmap, topic, quiz_normal, quiz_advanced).
+    """Generate content for ``action`` (roadmap, topic, topic_repair, review, quiz_*).
 
     The caller owns the prompt, so it supplies the schema and the prompt version.
     """
@@ -429,20 +428,6 @@ def generate_content(
     messages = build_generation_messages(prompt, system_instruction, output_schema)
     return _call_chain(
         action, messages, output_schema, prompt_version=prompt_version, context=context
-    )
-
-
-def review_content(
-    content: str,
-    criteria: dict[str, Any] | None = None,
-    *,
-    context: dict,
-) -> AIResult:
-    """Review content against the quality rubric. Raises ProviderError on outage."""
-    messages = build_review_messages(content, criteria)
-    return _call_chain(
-        "review", messages, REVIEW_SCHEMA,
-        prompt_version=REVIEW_PROMPT_VERSION, context=context,
     )
 
 

@@ -1,11 +1,9 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
 from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
-
-from datetime import timedelta
-
 from django.utils import timezone
 
 from apps.ai.exceptions import ProviderError
@@ -19,9 +17,9 @@ from apps.learning.tasks import (
 
 User = get_user_model()
 SEND = "apps.learning.events.send_event"
-REVIEW = "apps.ai.services.review_content"
-PASSED = ai_result({"overall_passed": True})
-FAILED = ai_result({"overall_passed": False})
+AI = "apps.learning.pipeline.generate_content"
+ON_TOPIC = ai_result({"on_topic": True, "reason": "ok", "issues": []})
+OFF_TOPIC = ai_result({"on_topic": False, "reason": "about something else", "issues": []})
 
 
 @pytest.fixture
@@ -35,53 +33,61 @@ def topic(enrolled):
     UserSubjectProgress.objects.create(user=enrolled, subject=subject)
     User.objects.create_user(email="out@b.com", password="p")  # not enrolled
     return Topic.objects.create(
-        subject=subject, title="T", level=1, order=1, summary="content"
+        subject=subject, title="T", level=1, order=1,
+        content_status=Topic.ContentStatus.GENERATING,
     )
+
+
+@pytest.fixture
+def in_review(topic):
+    """Generated and waiting for review."""
+    Topic.objects.filter(id=topic.id).update(summary="content")
+    return topic
 
 
 @pytest.mark.django_db
 class TestTopicStatusEvent:
     @patch(SEND)
-    @patch(REVIEW, return_value=PASSED)
-    def test_ready_is_published_to_enrolled_users_only(self, _rev, send, topic, enrolled):
-        review_content_for_topic(topic.id)
+    @patch(AI, return_value=ON_TOPIC)
+    def test_ready_is_published_to_enrolled_users_only(self, _ai, send, in_review, enrolled):
+        review_content_for_topic(in_review.id)
 
         send.assert_called_once_with(
             f"user-{enrolled.id}",
             "topic.status",
             {
-                "subject_id": topic.subject_id,
-                "topic_id": topic.id,
+                "subject_id": in_review.subject_id,
+                "topic_id": in_review.id,
                 "content_status": "READY",
                 "review_status": "PASSED",
             },
         )
 
     @patch(SEND)
-    @patch("apps.learning.tasks.generate_content_for_topic.delay")
-    @patch(REVIEW, return_value=FAILED)
-    def test_failed_is_published_when_reviews_exhausted(self, _rev, _gen, send, topic):
-        Topic.objects.filter(id=topic.id).update(review_attempts=1)
+    @patch(AI, return_value=OFF_TOPIC)
+    def test_rejected_is_published_when_off_topic_twice(self, _ai, send, in_review):
+        Topic.objects.filter(id=in_review.id).update(regeneration_count=1)
 
-        review_content_for_topic(topic.id)
+        review_content_for_topic(in_review.id)
 
-        assert send.call_args.args[2]["content_status"] == "FAILED"
+        payload = send.call_args.args[2]
+        assert (payload["content_status"], payload["review_status"]) == ("FAILED", "REJECTED")
 
     @patch(SEND)
     @patch("apps.learning.tasks.generate_content_for_topic.delay")
-    @patch(REVIEW, return_value=FAILED)
-    def test_regeneration_is_not_published(self, _rev, _gen, send, topic):
-        review_content_for_topic(topic.id)  # first miss: regenerates, not final
+    @patch(AI, return_value=OFF_TOPIC)
+    def test_regeneration_is_not_published(self, _ai, _gen, send, in_review):
+        review_content_for_topic(in_review.id)  # first off-topic: regenerates, not final
 
         send.assert_not_called()
 
     @patch(SEND, side_effect=RuntimeError("redis down"))
-    @patch(REVIEW, return_value=PASSED)
-    def test_publish_failure_does_not_fail_the_task(self, _rev, _send, topic):
-        review_content_for_topic(topic.id)
+    @patch(AI, return_value=ON_TOPIC)
+    def test_publish_failure_does_not_fail_the_task(self, _ai, _send, in_review):
+        review_content_for_topic(in_review.id)
 
-        topic.refresh_from_db()
-        assert topic.content_status == Topic.ContentStatus.READY
+        in_review.refresh_from_db()
+        assert in_review.content_status == Topic.ContentStatus.READY
 
 
 @pytest.mark.django_db
@@ -90,8 +96,7 @@ class TestProviderDownOnLastRetry:
         task = generate_content_for_topic
         task.push_request(retries=retries)
         try:
-            with patch("apps.learning.pipeline.generate_content",
-                       side_effect=ProviderError("down", provider="groq")):
+            with patch(AI, side_effect=ProviderError("down", provider="groq")):
                 with pytest.raises(ProviderError):
                     task(topic.id)
         finally:
@@ -99,15 +104,13 @@ class TestProviderDownOnLastRetry:
 
     @patch(SEND)
     def test_last_retry_marks_failed_and_publishes(self, send, topic):
-        Topic.objects.filter(id=topic.id).update(content_status="GENERATING")
         self._run(topic, retries=generate_content_for_topic.max_retries)
         topic.refresh_from_db()
-        assert topic.content_status == "FAILED"
+        assert (topic.content_status, topic.review_status) == ("FAILED", "PENDING")
         assert send.call_args.args[2]["content_status"] == "FAILED"
 
     @patch(SEND)
     def test_earlier_retry_leaves_topic_generating(self, send, topic):
-        Topic.objects.filter(id=topic.id).update(content_status="GENERATING")
         self._run(topic, retries=0)
         topic.refresh_from_db()
         assert topic.content_status == "GENERATING"
@@ -115,49 +118,24 @@ class TestProviderDownOnLastRetry:
 
 
 @pytest.mark.django_db
-class TestReviewOutage:
+class TestReviewOutageRetries:
     """A review outage is retried by Celery and never fails the topic."""
 
-    @pytest.fixture
-    def generating(self, topic):
-        Topic.objects.filter(id=topic.id).update(content_status="GENERATING")
-        return topic
-
     @patch(SEND)
-    @patch(REVIEW, side_effect=ProviderError("down", provider="groq"))
-    def test_outage_triggers_a_celery_retry(self, _rev, send, generating):
+    @patch(AI, side_effect=ProviderError("down", provider="groq"))
+    def test_outage_triggers_a_celery_retry(self, _ai, send, in_review):
         task = review_content_for_topic
         task.push_request(retries=0)
         try:
             with patch.object(task, "retry", side_effect=Retry()) as retry:
                 with pytest.raises(Retry):
-                    task(generating.id)
+                    task(in_review.id)
         finally:
             task.pop_request()
         assert isinstance(retry.call_args.kwargs["exc"], ProviderError)
-        generating.refresh_from_db()
-        assert generating.content_status == "GENERATING"
+        in_review.refresh_from_db()
+        assert in_review.content_status == "GENERATING"
         send.assert_not_called()
-
-    @patch(SEND)
-    @patch("apps.learning.tasks.generate_content_for_topic.delay")
-    @patch(REVIEW, side_effect=ProviderError("down", provider="groq"))
-    def test_outage_at_retry_exhaustion_publishes_instead_of_failing(
-        self, _rev, gen_delay, send, generating
-    ):
-        task = review_content_for_topic
-        task.push_request(retries=task.max_retries)
-        try:
-            with pytest.raises(ProviderError):
-                task(generating.id)
-        finally:
-            task.pop_request()
-        generating.refresh_from_db()
-        assert generating.content_status == "READY"
-        assert generating.review_status == "PENDING"
-        assert generating.review_attempts == 0
-        gen_delay.assert_not_called()
-        assert send.call_args.args[2]["content_status"] == "READY"
 
 
 @pytest.mark.django_db
@@ -165,7 +143,6 @@ class TestCleanupPublishes:
     @patch(SEND)
     def test_reset_topics_are_published(self, send, topic):
         Topic.objects.filter(id=topic.id).update(
-            content_status="GENERATING",
             generation_started_at=timezone.now() - timedelta(hours=2),
         )
         cleanup_stuck_generations()
@@ -173,5 +150,6 @@ class TestCleanupPublishes:
 
     @patch(SEND)
     def test_nothing_published_when_nothing_stuck(self, send, topic):
+        Topic.objects.filter(id=topic.id).update(content_status="READY")
         cleanup_stuck_generations()
         send.assert_not_called()
