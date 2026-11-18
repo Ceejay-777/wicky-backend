@@ -156,6 +156,11 @@ Deviations from spec (and why):
 Open questions for the owner:
 - Pass 3's question still stands: keep hourly requeueing of `FAILED`/`PENDING` topics that failed domain validation (up to two writer calls per topic per hour)?
 - Should `UNREVIEWED` show a banner to learners? Answered 2026-11-18: no, it is not the learner's business. The handoff now says to remove the review banner.
-- Run the queued path once live (worker + Redis, one topic, then its rows in admin) before merging? It needs a worker, not beat.
+- Run the queued path once live (worker + Redis, one topic, then its rows in admin) before merging? Answered 2026-11-18: yes, done (see the follow-up below).
 Notes for later passes:
 - None; this is the last pass. Follow-ups are F-9, F-11, F-12 and known bug 5.
+Follow-up, 2026-11-18 (queued path, live):
+- At the owner's request: one topic through a real Celery worker (threads pool, local Redis on 6390, no beat), real Groq, the Neon dev DB. Redis queue checked empty first. Topic 4 (WWII Pacific, level 1, no goal sentence: no topic on the dev DB has one, since every roadmap predates pass 2) was reset to `NOT_GENERATED` and started with `request_topic_generation`.
+- The worker received exactly three tasks, generate → review → repair, each queued by the stage before it, and nothing else. Result: `READY`/`FIXED`, 390 words, four paragraphs, 3 links, 86 s end to end. The reviewer kept one quoted issue (the summary said Britain declared war on Japan a day after the US; both declared on 8 December 1941), and the repair applied it. Three log rows (`topic-v1`, `review-v1`, `topic_repair-v1`, all gpt-oss-120b step 0) with the verdict and `{"repair": "repaired"}` annotations.
+- The three AI calls took about 22 s; the stages took 22 s, 42 s and 26 s in the worker, so most of the time is outside the AI calls (likely database round trips to Neon from a local machine). Not investigated.
+- Admin page not checked: the dev DB has no superuser, and I did not create one without asking. The rows were read directly instead.
