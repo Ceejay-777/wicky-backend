@@ -2,7 +2,6 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
-from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -114,27 +113,6 @@ class TestProviderDownOnLastRetry:
         self._run(topic, retries=0)
         topic.refresh_from_db()
         assert topic.content_status == "GENERATING"
-        send.assert_not_called()
-
-
-@pytest.mark.django_db
-class TestReviewOutageRetries:
-    """A review outage is retried by Celery and never fails the topic."""
-
-    @patch(SEND)
-    @patch(AI, side_effect=ProviderError("down", provider="groq"))
-    def test_outage_triggers_a_celery_retry(self, _ai, send, in_review):
-        task = review_content_for_topic
-        task.push_request(retries=0)
-        try:
-            with patch.object(task, "retry", side_effect=Retry()) as retry:
-                with pytest.raises(Retry):
-                    task(in_review.id)
-        finally:
-            task.pop_request()
-        assert isinstance(retry.call_args.kwargs["exc"], ProviderError)
-        in_review.refresh_from_db()
-        assert in_review.content_status == "GENERATING"
         send.assert_not_called()
 
 

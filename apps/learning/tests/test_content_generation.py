@@ -203,22 +203,6 @@ class TestGenTask:
             subject=subject, title="Causes of WW2", level=Topic.Level.ONE, order=1,
         )
 
-    @patch("apps.learning.tasks.review_content_for_topic.delay")
-    @patch("apps.learning.pipeline.generate_content")
-    def test_gen_task_happy_path(self, mock_gen, mock_review_delay, topic):
-        Topic.objects.filter(id=topic.id).update(content_status=Topic.ContentStatus.GENERATING)
-        mock_gen.return_value = ai_result({
-            "summary": LONG_SUMMARY,
-            "resource_links": [
-                {"title": "A", "url": "https://a.com", "type": "article"},
-                {"title": "B", "url": "https://b.com", "type": "video"},
-            ],
-        })
-        generate_content_for_topic(topic.id)
-        topic.refresh_from_db()
-        assert topic.summary == LONG_SUMMARY
-        mock_review_delay.assert_called_once_with(topic.id)
-
     @patch("apps.learning.tasks.generate_content_for_topic.delay")
     def test_request_generation_queues_only_once(self, mock_delay, topic):
         from apps.learning.services import request_topic_generation
@@ -237,27 +221,6 @@ class TestGenTask:
         assert request_topic_generation(topic.id) is False
         topic.refresh_from_db()
         assert topic.content_status == Topic.ContentStatus.FAILED
-
-    @patch("apps.learning.tasks.review_content_for_topic.delay")
-    @patch("apps.learning.pipeline.generate_content")
-    def test_gen_task_marks_failed_on_malformed_exhausted(self, mock_gen, mock_review_delay, topic):
-        Topic.objects.filter(id=topic.id).update(content_status=Topic.ContentStatus.GENERATING)
-        mock_gen.return_value = ai_result({"summary": "x", "resource_links": []})
-        generate_content_for_topic(topic.id)
-        topic.refresh_from_db()
-        assert topic.content_status == Topic.ContentStatus.FAILED
-        assert topic.review_status == Topic.ReviewStatus.PENDING
-        mock_review_delay.assert_not_called()
-
-    @patch("apps.learning.tasks.review_content_for_topic.delay")
-    @patch("apps.learning.pipeline.generate_content")
-    def test_gen_task_provider_error_does_not_flag(self, mock_gen, mock_review_delay, topic):
-        """ProviderError should propagate up for Celery's own retry."""
-        Topic.objects.filter(id=topic.id).update(content_status=Topic.ContentStatus.GENERATING)
-        mock_gen.side_effect = ProviderError("API down", provider="gemini")
-        with pytest.raises(ProviderError):
-            generate_content_for_topic(topic.id)
-        mock_review_delay.assert_not_called()
 
 
 
@@ -429,20 +392,6 @@ class TestCleanupStuck:
         assert topic.content_status == Topic.ContentStatus.NOT_GENERATED
         assert topic.review_status == Topic.ReviewStatus.PENDING
         assert topic.generation_started_at is None
-
-    def test_ignores_rejected(self):
-        from apps.learning.tasks import cleanup_stuck_generations
-        subject = Subject.objects.create(name="Test")
-        old = timezone.now() - timedelta(hours=2)
-        topic = Topic.objects.create(
-            subject=subject, title="Failed", level=1, order=1,
-            content_status=Topic.ContentStatus.FAILED,
-            review_status=Topic.ReviewStatus.REJECTED,
-            generation_started_at=old,
-        )
-        cleanup_stuck_generations()
-        topic.refresh_from_db()
-        assert topic.content_status == Topic.ContentStatus.FAILED
 
     def test_ignores_recent_failed(self):
         from apps.learning.tasks import cleanup_stuck_generations

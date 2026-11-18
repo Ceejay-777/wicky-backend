@@ -6,7 +6,6 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.ai.exceptions import ProviderError
 from apps.ai.models import AIGenerationLog
 from apps.ai.tests.helpers import ai_result
 from apps.ai.tests.test_services import fake_groq, reply
@@ -306,7 +305,7 @@ class TestPipeline:
 
 @pytest.mark.django_db
 class TestGenerationTask:
-    """The task's handling of GenerationError and ProviderError is unchanged."""
+    """Generation stage task: validation failure and success. Outages: test_topic_events, test_review_pipeline."""
 
     @pytest.fixture
     def topic(self, roadmap):
@@ -327,26 +326,8 @@ class TestGenerationTask:
         gen.return_value = ai_result(content(SUMMARY_MIN_WORDS - 1))
         self._run(topic, retries=0)
         topic.refresh_from_db()
-        assert topic.content_status == Topic.ContentStatus.FAILED
+        assert (topic.content_status, topic.review_status) == ("FAILED", "PENDING")
         assert gen.call_count == 2
-        review.assert_not_called()
-
-    @patch("apps.learning.tasks.review_content_for_topic.delay")
-    @patch("apps.learning.pipeline.generate_content", side_effect=ProviderError("down", provider="groq"))
-    def test_provider_error_before_last_retry_leaves_generating(self, _gen, review, topic):
-        with pytest.raises(ProviderError):
-            self._run(topic, retries=0)
-        topic.refresh_from_db()
-        assert topic.content_status == Topic.ContentStatus.GENERATING
-        review.assert_not_called()
-
-    @patch("apps.learning.tasks.review_content_for_topic.delay")
-    @patch("apps.learning.pipeline.generate_content", side_effect=ProviderError("down", provider="groq"))
-    def test_provider_error_on_last_retry_marks_failed(self, _gen, review, topic):
-        with pytest.raises(ProviderError):
-            self._run(topic, retries=generate_content_for_topic.max_retries)
-        topic.refresh_from_db()
-        assert topic.content_status == Topic.ContentStatus.FAILED
         review.assert_not_called()
 
     @patch("apps.learning.tasks.review_content_for_topic.delay")
