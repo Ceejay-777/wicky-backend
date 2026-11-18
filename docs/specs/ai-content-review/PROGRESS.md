@@ -75,7 +75,7 @@ Notes for later passes:
 - `docs/backlog/known-bugs.md` #3 still describes the completeness rejections and `FLAGGED`; pass 3 owns that.
 ## Pass 3 — 2026-11-17
 Commit: the `feat(learning): narrow quote-checked review with repair stage` commit on `feat/ai-content-review`
-Tests: 554 → 569 (all passing: yes; still only the pre-existing `google.generativeai` FutureWarning)
+Tests: 554 → 570 (all passing: yes; still only the pre-existing `google.generativeai` FutureWarning)
 Done:
 - `Topic.ReviewStatus` is `PENDING`, `PASSED`, `FIXED`, `UNREVIEWED`, `REJECTED`; `FLAGGED`, the old `FAILED` review value and `review_attempts` are gone. New fields `regeneration_count` and `review_verdict` (JSON: `on_topic`, `reason`, kept `issues` of quote/problem/correction, `dropped`). `Topic.VISIBLE_REVIEW_STATUSES` = `PASSED`, `FIXED`, `UNREVIEWED`. Migration `learning/0014_review_pipeline` (no backfill).
 - Reviewer and repair prompts, schemas and versions (`review-v1`, `topic_repair-v1`) in `apps/learning/prompts.py`. Writer, reviewer and repairer share one brief builder (`_brief_lines`), so "on topic" means the same thing to all three; the `topic-v1` text is unchanged. The reviewer never sees resource links. The old review prompt, system instruction, schema, `build_review_messages` and `review_content` are gone from `apps/ai`; review now goes through `generate_content(action="review")`. New action `topic_repair` with the writer's chain and an 8192 ceiling.
@@ -96,6 +96,7 @@ Open questions for the owner:
 - Should hourly requeueing of domain-validation failures stay? Each requeue can cost two writer calls per topic per hour while the model keeps returning unusable output. Stopping it would need a way to tell those failures apart (for example a separate review value).
 - Migration `learning/0014_review_pipeline` is not applied to the Neon dev DB. Say if you want it applied, as with 0002 and 0013.
 Notes for later passes:
+- The generate stage saves only into the round it started in (still `GENERATING`, summary still empty), so a task left over from an earlier round (for example after the hourly sweeper reset it) cannot overwrite a newer one or queue a second review.
 - Pass 4 handoff: the frontend should read the new `review_status` values, should expect an empty `summary`/`resource_links` until `PASSED`/`FIXED`/`UNREVIEWED`, and should treat `FAILED` + `REJECTED` as "retry may not help".
 - An off-topic regeneration is not announced over SSE (only terminal states are), the same as before.
 - `apps/ai/providers.py` still has `review_models` on the provider config, used only by `verify_provider_models`, which nothing calls (pass 1 note).

@@ -11,6 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.ai.exceptions import ProviderError
 from apps.ai.models import AIGenerationLog
+from apps.ai.tests.helpers import ai_result
 from apps.ai.tests.test_services import fake_groq, reply
 from apps.learning.models import Subject, Topic, UserSubjectProgress
 from apps.learning.pipeline import interpret_review
@@ -269,6 +270,20 @@ class TestOutages:
         with patcher:
             generate_content_for_topic(topic.id)
         assert client.payloads == []
+
+    def test_stale_generation_does_not_overwrite_a_newer_round(self, topic):
+        Topic.objects.filter(id=topic.id).update(summary="")
+
+        def sweeper_resets_mid_call(*args, **kwargs):
+            Topic.objects.filter(id=topic.id).update(content_status="NOT_GENERATED")
+            return ai_result({"summary": SUMMARY, "resource_links": LINKS})
+
+        with patch("apps.learning.pipeline.generate_content", side_effect=sweeper_resets_mid_call), \
+                patch("apps.learning.tasks.review_content_for_topic.delay") as queued:
+            generate_content_for_topic(topic.id)
+        t = refreshed(topic)
+        assert (t.content_status, t.summary) == ("NOT_GENERATED", "")
+        queued.assert_not_called()
 
     def test_generation_outage_fails_pending_and_sweeper_requeues(self, topic):
         Topic.objects.filter(id=topic.id).update(summary="")

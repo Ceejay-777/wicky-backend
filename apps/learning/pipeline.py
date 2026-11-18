@@ -231,11 +231,12 @@ def generate_topic_content(topic_id: int) -> None:
         except GenerationError:
             if attempt >= max_attempts - 1:
                 raise
-    Topic.objects.filter(id=topic_id).update(
-        summary=validated["summary"],
-        resource_links=validated["resource_links"],
-    )
-    review_content_for_topic.delay(topic_id)
+    # Save only into the round we started in; a newer round (or a saved summary) wins.
+    saved = Topic.objects.filter(
+        id=topic_id, content_status=Topic.ContentStatus.GENERATING, summary=""
+    ).update(summary=validated["summary"], resource_links=validated["resource_links"])
+    if saved:
+        review_content_for_topic.delay(topic_id)
 
 
 def mark_generation_failed(topic_id: int) -> None:
