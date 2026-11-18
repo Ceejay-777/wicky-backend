@@ -1,19 +1,13 @@
 """
-Provider configuration, client creation, model verification,
-and response format builders.
+Provider configuration, client creation and response format builders.
 
 Each provider (Groq, Gemini) has its own config and response format
 strategy. The rest of the codebase never constructs clients or response
 formats directly -- it goes through this module.
 """
 
-import logging
 import os
 from dataclasses import dataclass
-
-from .exceptions import ProviderError
-
-logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -26,8 +20,6 @@ class ProviderConfig:
     name: str
     base_url: str
     api_key_env: str
-    generate_models: list[str]
-    review_models: list[str]
 
 
 PROVIDERS: dict[str, ProviderConfig] = {
@@ -35,16 +27,11 @@ PROVIDERS: dict[str, ProviderConfig] = {
         name="gemini",
         base_url="",
         api_key_env="GEMINI_API_KEY",
-        # Text generation moved to Groq; Gemini is only used for embeddings.
-        generate_models=[],
-        review_models=[],
     ),
     "groq": ProviderConfig(
         name="groq",
         base_url="https://api.groq.com/openai/v1",
         api_key_env="GROQ_API_KEY",
-        generate_models=["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"],
-        review_models=["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
     ),
 }
 
@@ -70,55 +57,6 @@ def get_client(config: ProviderConfig):
 
 
 # ---------------------------------------------------------------------------
-# Model verification (canary check, cached per worker lifecycle)
-# ---------------------------------------------------------------------------
-
-_verified: dict[str, list[str]] = {}
-
-
-def verify_provider_models(config: ProviderConfig) -> list[str]:
-    """Hit /models, confirm configured model IDs exist. Cache result.
-
-    Gemini is skipped -- the native SDK validates models at call time.
-    """
-    if config.name in _verified:
-        return _verified[config.name]
-
-    if config.name == "gemini":
-        _verified[config.name] = config.generate_models + config.review_models
-        return _verified[config.name]
-
-    import httpx
-
-    api_key = os.environ.get(config.api_key_env, "")
-    url = f"{config.base_url}/models"
-    headers = {"Authorization": f"Bearer {api_key}"}
-
-    resp = httpx.get(url, headers=headers, timeout=15)
-    resp.raise_for_status()
-    data = resp.json()
-    model_ids = [m["id"] for m in data.get("data", [])]
-    _verified[config.name] = model_ids
-
-    all_models = config.generate_models + config.review_models
-    missing = [m for m in all_models if m not in model_ids]
-    if missing:
-        raise ProviderError(
-            f"Provider {config.name}: models not available: {missing}",
-            provider=config.name,
-            recoverable=False,
-        )
-
-    logger.info("Provider %s verified: %s", config.name, all_models)
-    return model_ids
-
-
-def reset_verification() -> None:
-    """Clear verification cache. Used in tests."""
-    _verified.clear()
-
-
-# ---------------------------------------------------------------------------
 # Response format builders (per-provider structured output strategy)
 # ---------------------------------------------------------------------------
 
@@ -133,20 +71,6 @@ def build_groq_response_format(schema: dict, name: str) -> dict:
             "schema": schema,
         },
     }
-
-
-def build_gemini_response_format():
-    """Gemini uses native SDK -- returns None, handled by genai library."""
-    return
-
-
-def get_response_format(config_name: str, schema: dict, schema_name: str):
-    """Return the correct response_format for the given provider."""
-    if config_name == "groq":
-        return build_groq_response_format(schema, schema_name)
-    if config_name == "gemini":
-        return build_gemini_response_format()
-    return None
 
 
 # ---------------------------------------------------------------------------

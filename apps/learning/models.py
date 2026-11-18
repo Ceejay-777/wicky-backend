@@ -82,6 +82,10 @@ class Topic(models.Model):
     def __str__(self):
         return f"{self.title} ({self.subject.name})"
 
+    @property
+    def content_visible(self) -> bool:
+        return self.review_status in self.VISIBLE_REVIEW_STATUSES
+
 
 class UserSubjectProgress(models.Model):
     class Status(models.TextChoices):

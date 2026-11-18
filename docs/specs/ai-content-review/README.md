@@ -1,6 +1,6 @@
 # Spec: AI content review and generation quality
 
-Status: approved, not started. Work happens on branch `feat/ai-content-review` in four passes. Each pass runs in its own session.
+Status: implemented on `feat/ai-content-review`, pending merge. Work happens on branch `feat/ai-content-review` in four passes. Each pass runs in its own session.
 
 Read this file first, then `PROGRESS.md`, then the file for your pass. `AGENTS.md` still applies in full; where this spec is stricter, follow this spec.
 
@@ -10,6 +10,8 @@ Read this file first, then `PROGRESS.md`, then the file for your pass. `AGENTS.m
 | 2 | [pass-2-generation-quality.md](pass-2-generation-quality.md) | Better topic summaries: goal sentence, level, neighbours, fixed shape, prompt versions |
 | 3 | [pass-3-review-pipeline.md](pass-3-review-pipeline.md) | Narrow reviewer, quote check, fix-not-regenerate, new review statuses |
 | 4 | [pass-4-verification.md](pass-4-verification.md) | Verification, architecture audit, docs, frontend handoff |
+
+Frontend handoff note: [frontend-handoff.md](frontend-handoff.md).
 
 ---
 

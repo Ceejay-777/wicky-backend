@@ -9,6 +9,7 @@ Severity: **High** (security / data integrity) · **Medium** · **Low**
 | 1 | Medium | Validation | `answers` accepts booleans; `notification-frequency` unchecked |
 | 2 | Medium | Throttle | Authenticated users are not throttled (`user` rate defined, `UserRateThrottle` not enabled) |
 | 4 | Low | Misc | Small issues, list below |
+| 5 | Low | Cost | One quiz request can run the AI chain twice |
 
 ## 1. Input validation
 - `answers: [true, ...]` is accepted as option 1 (`bool` is an `int`).
@@ -29,3 +30,6 @@ Replaced by the narrow review: only off-topic or quoted, verified factual errors
 - `/api/health/` reported `celery: true` with no worker running (2026-10-12, not rechecked).
 - `google.generativeai` is deprecated (FutureWarning); see F-4.
 - Not covered by the 2026-10-12 live run: Brevo emails, Beat dispatch, level-up / subject completion, auto-select, signup / password-reset flows.
+
+## 5. Quiz generation can call the AI twice
+`build_quiz` (`apps/learning/services.py`) retries the AI call inside the task on `ProviderError` as well as on `GenerationError`. When the whole chain fails, the task runs it a second time before raising, and Celery's `autoretry_for` then retries on top. Fix: retry in-task only on `GenerationError` and let `ProviderError` propagate. Left out of the AI content review spec because quizzes were out of scope.

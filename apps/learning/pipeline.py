@@ -257,15 +257,20 @@ def review_topic_content(topic_id: int) -> None:
     stored = verdict.to_json()
     annotate_outcome(result.log_id, stored)
 
+    # Persist only into the round we reviewed: the sweeper may have published it meanwhile.
+    this_round = Topic.objects.filter(
+        id=topic_id, content_status=Topic.ContentStatus.GENERATING, review_verdict__isnull=True
+    )
+
     if not verdict.on_topic:  # off topic wins over issues: never repaired
         if topic.regeneration_count == 0:
-            Topic.objects.filter(id=topic_id).update(
+            if this_round.update(
                 content_status=Topic.ContentStatus.NOT_GENERATED,
                 review_verdict=stored,
                 regeneration_count=F("regeneration_count") + 1,
                 generation_started_at=None,
-            )
-            request_topic_generation(topic_id)
+            ):
+                request_topic_generation(topic_id)
         else:
             _finish(
                 topic_id, Topic.ContentStatus.FAILED, Topic.ReviewStatus.REJECTED,
@@ -280,8 +285,8 @@ def review_topic_content(topic_id: int) -> None:
         )
         return
 
-    Topic.objects.filter(id=topic_id).update(review_verdict=stored)
-    repair_content_for_topic.delay(topic_id)
+    if this_round.update(review_verdict=stored):
+        repair_content_for_topic.delay(topic_id)
 
 
 def repair_topic_content(topic_id: int) -> None:
@@ -314,3 +319,29 @@ def repair_topic_content(topic_id: int) -> None:
 def give_up_review(topic_id: int) -> None:
     """Review or repair could not complete (outage, stuck): publish the original (D6)."""
     _finish(topic_id, Topic.ContentStatus.READY, Topic.ReviewStatus.UNREVIEWED)
+
+
+def sweep_stuck_topics(cutoff) -> list[int]:
+    """Recover topics whose pipeline stalled before ``cutoff``.
+
+    Returns the ids reset to NOT_GENERATED, for the caller to announce.
+    """
+    stuck = Topic.objects.filter(
+        content_status=Topic.ContentStatus.GENERATING, generation_started_at__lt=cutoff
+    )
+    # Stuck in review or repair: the summary is saved, so publish it unreviewed.
+    for topic_id in stuck.exclude(summary="").values_list("id", flat=True):
+        give_up_review(topic_id)
+    # Stuck in generation (nothing saved), or generation failed (FAILED with PENDING):
+    # let the next page open restart it. REJECTED is never requeued.
+    reset_ids = list(stuck.filter(summary="").values_list("id", flat=True)) + list(
+        Topic.objects.filter(
+            content_status=Topic.ContentStatus.FAILED,
+            review_status=Topic.ReviewStatus.PENDING,
+            generation_started_at__lt=cutoff,
+        ).values_list("id", flat=True)
+    )
+    Topic.objects.filter(id__in=reset_ids).update(
+        content_status=Topic.ContentStatus.NOT_GENERATED, generation_started_at=None
+    )
+    return reset_ids

@@ -100,4 +100,62 @@ Notes for later passes:
 - Pass 4 handoff: the frontend should read the new `review_status` values, should expect an empty `summary`/`resource_links` until `PASSED`/`FIXED`/`UNREVIEWED`, and should treat `FAILED` + `REJECTED` as "retry may not help".
 - An off-topic regeneration is not announced over SSE (only terminal states are), the same as before.
 - `apps/ai/providers.py` still has `review_models` on the provider config, used only by `verify_provider_models`, which nothing calls (pass 1 note).
-## Pass 4: not started
+## Pass 4 — 2026-11-18
+Commit: the `chore(learning): pass 4 audit fixes, docs and frontend handoff` commit on `feat/ai-content-review`
+Tests: `main` 517 (pass 1 baseline; `main` has not moved since) → start of pass 570 → 566 (all passing: yes; still only the pre-existing `google.generativeai` FutureWarning). The drop is 7 tests of deleted dead code; 4 tests were added.
+
+Summary for the owner:
+- What changed on this branch: every AI call goes through one dispatcher that logs each chain step to `AIGenerationLog`; the topic writer gets goal, level and neighbours and writes four plain paragraphs; the reviewer checks only "on topic" and quoted factual errors, quotes are verified in code, errors are repaired once, off topic regenerates once, and an outage publishes `UNREVIEWED` instead of failing good content.
+- What to look at first in admin (`/admin/ai/aigenerationlog/`): filter action `review`, prompt version `review-v1`, and read `outcome_annotation` (the kept issues and the `dropped` count) next to the summary in the request. Mark `human_verdict` on a sample; that is F-11. Then filter action `topic_repair` to see whether repairs fixed what they were asked to.
+- Known limits: about 1 lesson in 3 still had a wrong statement after review and repair in the 2026-11-18 live test (writer and checker share the same model knowledge; F-10). The quote check is strict, so a reviewer that paraphrases ("16 century" for "16th century") loses a correct issue. `UNREVIEWED` topics are never reviewed later (F-9). Links are unchecked (F-1). Quizzes are logged but not reviewed (F-12).
+
+Done:
+- 4.1 Read the full `main...HEAD` diff. Found and fixed the items marked "fail" below.
+- 4.2 Decision table and 4.3 audit (below).
+- 4.4 Full suite passes; `makemigrations --check --dry-run` (development settings): "No changes detected". `showmigrations` on the Neon dev DB: `ai/0002`, `learning/0013` and `learning/0014` are applied. Live run: not repeated in this pass. The owner's 2026-11-18 live test (`docs/evidence/2026-11-18-live-content-review/`) ran 19 real topics plus the off-topic, rejected and retry branches through this pipeline with real Groq and the Neon dev DB, and its call-log rows are saved there. It ran Celery inline in one script, so the queued path (Redis, a worker, the `delay` hand-offs between stages) has not been exercised live, and I did not open the admin against those rows. I did not start a worker or beat (AI credits).
+- 4.5 Docs: `docs/reference/deployment.md` (the sweeper row described the old behaviour), `docs/reference/ai-providers.md` (late-reply guard, `sweep_stuck_topics`), `docs/backlog/follow-ups.md` (F-5 no longer claims `verify_provider_models` runs; new F-11 and F-12), `docs/backlog/known-bugs.md` (#5, quiz double AI call), spec `README.md` status and handoff link. `docs/README.md` already indexes `specs/`. `AGENTS.md` needed no change.
+- 4.6 `frontend-handoff.md`: `ReviewStatus` change, the `underReview` check and wording per status (including that the `FAILED` screen's "check your connection" text is wrong for `REJECTED`), `description`, `toParagraphs` unchanged.
+- 4.7 Follow-ups: F-9 (re-review `UNREVIEWED`), F-11 (reviewer precision from human verdicts), F-12 (quiz review, to be specced), F-1 (links) are all present.
+
+Decision check (4.2):
+
+| # | Where in the code | Test |
+|---|---|---|
+| D1 | `Topic.content_visible` / `VISIBLE_REVIEW_STATUSES` (`apps/learning/models.py`), used by `TopicDetailView`; the pipeline leaves `GENERATING` only through `_finish` | `test_review_pipeline.py::TestStateAndApi::test_summary_shown_only_for_visible_statuses` |
+| D2 | `_ACTION_CHAINS["review"]` (`apps/ai/services.py`) | `apps/ai/tests/test_services.py::test_review_chain_order` |
+| D3 | `build_review_prompt`, `REVIEW_SCHEMA` (`apps/learning/prompts.py`) | `TestReviewPrompt::test_states_that_omissions_and_style_are_not_issues`, `test_contains_goal_level_and_neighbours_but_no_links` |
+| D4 | `interpret_review` (`apps/learning/pipeline.py`) | `TestInterpretReview` (all), `TestDecisions::test_only_made_up_quotes_passes_without_repair` |
+| D5 | `repair_topic_content` (one call, `_finish` to `FIXED`, no review queued) | `TestDecisions::test_real_issue_is_repaired_without_re_review`, `test_invalid_repair_keeps_the_original` |
+| D6 | `review_content_for_topic` / `repair_content_for_topic` (`apps/learning/tasks.py`) → `give_up_review` | `TestOutages::test_review_outage_retries_then_publishes_unreviewed`, `test_repair_outage_retries_then_publishes_without_re_review` |
+| D7 | `review_topic_content` off-topic branch (`regeneration_count`) | `TestDecisions::test_off_topic_once_regenerates_then_passes`, `test_off_topic_twice_is_rejected`, `test_off_topic_with_issues_regenerates_not_repairs` |
+| D8 | `FORMAT_RULES` (prompts), `normalise_summary` (pipeline) | `test_generation_quality.py::test_strips_markdown_and_keeps_text`, `test_saved_summary_is_normalised` |
+| D9 | `build_topic_prompt`, `_brief_lines` (prompts); `_brief`, `_neighbour_titles` (pipeline) | `test_generation_quality.py::test_includes_every_input_and_the_shape`, `test_messages_carry_level_goal_and_neighbours` |
+| D10 | `AIGenerationLog` (`apps/ai/models.py`), `record_call` (`calllog.py`), `admin.py`, `delete_old_generation_logs` + beat entry (`config/celery.py`), `AI_LOG_RETENTION_DAYS` | `test_services.py::test_row_records_the_call`, `test_call_log_admin.py` (retention, admin, verdict save) |
+| D11 | `prompt_version` required by `_call_chain`; versions in `apps/learning/prompts.py` and `apps/ai/prompts.py` | `test_full_cycle_logs_each_stage_with_its_version`, `test_missing_prompt_version_is_rejected` |
+| D12 | Migrations `learning/0013`, `0014`, `ai/0002` hold schema operations only (no `RunPython`); no aliases for old values | `test_review_pipeline.py::test_review_statuses_are_only_the_new_values` (added this pass) |
+
+Architecture audit (4.3):
+- `apps/ai` imports nothing from `apps/learning`: pass (`test_apps_ai_never_imports_apps_learning`).
+- `apps/ai` mentions no topics or subjects beyond generic context: pass. Action names (`topic`, `roadmap`, `quiz_*`) are chain keys, `topic_id` is a plain indexed column taken from `context` for admin search, and the standardize/resolve prompts talk about "subjects" because they are those prompts (moving them is out of scope, see pass 1).
+- Every AI call goes through the dispatcher: pass after fix. The only provider HTTP call is `_call_openai_compatible`, reached only from `_call_chain`; Gemini text (`call_gemini_native`) is also reached only from there; embeddings are a separate, non-chat path (`generate_embedding`). Fail fixed: `verify_provider_models` (unused) made its own HTTP call to the provider. It was removed, with the `generate_models`/`review_models` lists it read (they duplicated `_ACTION_CHAINS`), the unused `get_response_format`/`build_gemini_response_format`, and their tests.
+- Prompt version and context on every call: pass. `roadmap-v1`, `topic-v1`, `review-v1`, `topic_repair-v1`. Placeholders kept: `quiz_normal-v0`, `quiz_advanced-v0` (built in `build_quiz`), `standardize-v0`, `resolve-v0`.
+- No roadmap, topic, review or repair prompt text outside `apps/learning/prompts.py`: pass.
+- Pipeline logic only in the pipeline: pass after two fixes. (1) The hourly sweeper's topic part (which stage a stuck topic is in, publish `UNREVIEWED` or reset, which `FAILED` topics to requeue) moved from `cleanup_stuck_generations` to `pipeline.sweep_stuck_topics`; the task only calls it and announces. (2) `TopicDetailView` computed visibility from review statuses; it now reads `Topic.content_visible`. Accepted as is: `send_notification` skips `REJECTED` when choosing a topic to restart (a restart filter, not a review decision).
+- No branching on exception text: pass (`str(e)` is only passed on as a message or logged).
+- Typed results: pass (`AIResult`; `ReviewVerdict`/`ReviewIssue`, stored as JSON through `to_json`/`from_json`).
+- No leftovers of `FLAGGED`, `review_attempts`, the four axes, or `TOPIC_CONTENT_SCHEMA` in `apps/ai`: pass. Remaining mentions are migration history (`0001`, `0014`), this spec, earlier `PROGRESS.md` entries, and one evidence line in `ai-providers.md` that says the four-axis review was replaced.
+- No path calls the AI twice for one request: pass after fix, with two known exceptions. Generate is guarded by `GENERATING` + empty summary and saves only into its own round; review by `GENERATING` + no verdict; repair by `GENERATING` + an on-topic verdict with issues; a Celery retry only re-enters a stage whose result is not saved. Fail fixed: the review stage's off-topic and "has issues" writes were unconditional, so a review reply arriving after the sweeper had published the topic `UNREVIEWED` would flip a `READY` topic back to `NOT_GENERATED` and pay for a regeneration (or queue a pointless repair). Both writes now apply only while the topic is still `GENERATING` with no verdict, and only then queue the next stage (`TestOutages::test_late_review_does_not_reopen_a_published_topic`, which fails on the old code). Known exceptions: the writer's second call on a domain validation failure (owner decision, pass 2), and `build_quiz` retrying on `ProviderError` (quizzes out of scope; known bug 5).
+- Logging failures cannot break a stage: pass (`test_log_write_failure_does_not_break_the_call`; `annotate_outcome` also catches and reports, `test_annotating_an_unknown_id_does_not_raise`).
+- Retention batched and scheduled: pass (`delete_old_generation_logs` deletes id batches of 1000; daily in `config/celery.py`; `test_deletes_old_rows_in_batches_and_keeps_new_ones`).
+- Admin list without large columns: pass (`test_changelist_loads_without_large_columns`).
+- Dead code: pass after the provider removal above. `_is_retryable_error` stays (used by `generate_embedding`).
+
+Deviations from spec (and why):
+- No live run in this pass (see 4.4); the 2026-11-18 evidence stands in for it, with the gaps stated.
+- The audit removed dead code the branch did not add (`verify_provider_models`, `get_response_format`), because it duplicated the chains and was the one provider HTTP call outside the dispatcher. F-5 now says nothing checks model IDs at startup.
+Open questions for the owner:
+- Pass 3's question still stands: keep hourly requeueing of `FAILED`/`PENDING` topics that failed domain validation (up to two writer calls per topic per hour)?
+- Should `UNREVIEWED` show a banner to learners? The handoff leaves it optional.
+- Run the queued path once live (worker + Redis, one topic, then its rows in admin) before merging? It needs a worker, not beat.
+Notes for later passes:
+- None; this is the last pass. Follow-ups are F-9, F-11, F-12 and known bug 5.

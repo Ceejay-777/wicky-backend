@@ -233,7 +233,7 @@ def send_notification(self, user_subject_progress_id):
 @shared_task(name="learning.cleanup_stuck_generations")
 def cleanup_stuck_generations() -> None:
     from .events import publish_roadmap_status, publish_topic_status
-    from .models import Subject, Topic
+    from .models import Subject
 
     cutoff = timezone.now() - timedelta(hours=1)
 
@@ -251,34 +251,9 @@ def cleanup_stuck_generations() -> None:
         )
         publish_roadmap_status(subject)
 
-    from .pipeline import give_up_review
+    from .pipeline import sweep_stuck_topics
 
-    stuck = Topic.objects.filter(
-        content_status=Topic.ContentStatus.GENERATING,
-        generation_started_at__lt=cutoff,
-    )
-    # Stuck in review or repair: the summary is saved, so publish it unreviewed.
-    for topic_id in stuck.exclude(summary="").values_list("id", flat=True):
-        give_up_review(topic_id)
-    # Stuck in generation: nothing saved, so let the next page open restart it.
-    stuck_ids = list(stuck.filter(summary="").values_list("id", flat=True))
-    Topic.objects.filter(id__in=stuck_ids).update(
-        content_status=Topic.ContentStatus.NOT_GENERATED,
-        generation_started_at=None,
-    )
-
-    # FAILED with PENDING failed in generation (outage); REJECTED is never requeued.
-    failed_ids = list(
-        Topic.objects.filter(
-            content_status=Topic.ContentStatus.FAILED,
-            review_status=Topic.ReviewStatus.PENDING,
-            generation_started_at__lt=cutoff,
-        ).values_list("id", flat=True)
-    )
-    Topic.objects.filter(id__in=failed_ids).update(
-        content_status=Topic.ContentStatus.NOT_GENERATED,
-        generation_started_at=None,
-    )
+    reset_topic_ids = sweep_stuck_topics(cutoff)
 
     # A quiz the learner is waiting on is not worth an hour: surface FAILED so the page offers a retry.
     from .models import QuizAttempt
@@ -294,7 +269,7 @@ def cleanup_stuck_generations() -> None:
         mark_quiz_failed(attempt_id)
 
     # Tell open pages the topic changed so they refetch (opening it restarts generation).
-    for topic_id in stuck_ids + failed_ids:
+    for topic_id in reset_topic_ids:
         publish_topic_status(topic_id)
 
 

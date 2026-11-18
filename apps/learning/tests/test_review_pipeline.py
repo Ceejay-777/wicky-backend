@@ -285,6 +285,25 @@ class TestOutages:
         assert (t.content_status, t.summary) == ("NOT_GENERATED", "")
         queued.assert_not_called()
 
+    @pytest.mark.parametrize("verdict", [
+        {"on_topic": False, "reason": "r", "issues": []},
+        {"on_topic": True, "reason": "r", "issues": [issue()]},
+    ])
+    def test_late_review_does_not_reopen_a_published_topic(self, topic, verdict):
+        def sweeper_publishes_mid_call(*args, **kwargs):
+            Topic.objects.filter(id=topic.id).update(content_status="READY", review_status="UNREVIEWED")
+            return ai_result(verdict)
+
+        with patch("apps.learning.pipeline.generate_content", side_effect=sweeper_publishes_mid_call), \
+                patch("apps.learning.services.request_topic_generation") as regenerate, \
+                patch("apps.learning.tasks.repair_content_for_topic.delay") as repair:
+            review_content_for_topic(topic.id)
+        t = refreshed(topic)
+        assert (t.content_status, t.review_status, t.summary) == ("READY", "UNREVIEWED", SUMMARY)
+        assert (t.regeneration_count, t.review_verdict) == (0, None)
+        regenerate.assert_not_called()
+        repair.assert_not_called()
+
     def test_generation_outage_fails_pending_and_sweeper_requeues(self, topic):
         Topic.objects.filter(id=topic.id).update(summary="")
         patcher, _ = fake_groq(*OUTAGE)
@@ -329,6 +348,12 @@ def api(subject):
     client = APIClient()
     client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
     return client, user
+
+
+def test_review_statuses_are_only_the_new_values():
+    # D12: old values (FLAGGED, review FAILED) are gone, with no compatibility aliases.
+    assert set(Topic.ReviewStatus.values) == {"PENDING", "PASSED", "FIXED", "UNREVIEWED", "REJECTED"}
+    assert not hasattr(Topic, "review_attempts")
 
 
 @LOG_DB

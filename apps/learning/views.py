@@ -469,7 +469,7 @@ class TopicDetailView(GenericAPIView):
     def get(self, request, topic_id):
         topic = get_accessible_topic(request.user, topic_id)
         prefetch_topic_content(topic)
-        visible = topic.review_status in Topic.VISIBLE_REVIEW_STATUSES
+        visible = topic.content_visible
         return Response({
             "data": {
                 "id": topic.id,
