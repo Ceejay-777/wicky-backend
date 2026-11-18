@@ -30,7 +30,7 @@ The backend now hides the summary and links itself: until review finishes, `summ
 `apps/web/src/app/(app)/topics/[id]/page.tsx` line 95 tests `review_status === "FLAGGED" || review_status === "FAILED"`. Neither value can occur any more, so the banner never shows. Suggested change:
 
 - `PASSED` and `FIXED`: show the reading normally, no banner. `FIXED` is a success; do not tell the learner something was wrong.
-- `UNREVIEWED`: show the reading normally. Optionally keep a quiet banner, reusing the existing one with new wording, for example: "This reading has not been checked yet. You can keep reading." That would make `underReview={topic.review_status === "UNREVIEWED"}`. Dropping the banner is also fine.
+- `UNREVIEWED`: show the reading normally, with no banner. Owner decision (2026-11-18): whether a reading was checked is not the learner's business. No status needs the "still being reviewed" banner any more, so remove the `underReview` prop and its banner from the reading view.
 - `REJECTED`: comes with `content_status === "FAILED"`, so it already lands in the `FAILED` branch (the "Not ready yet" screen with `RetryButton`). That screen's text, "Check your connection and try again", is wrong for this case. Suggested text when `review_status === "REJECTED"`: "We could not write a reading that fits this topic. You can try again." `POST /topics/:id/retry` restarts it, but a retry may give the same result, so keep the Back to roadmap link prominent.
 - `FAILED` with `PENDING`: generation itself failed (outage or unusable output). The current text and retry button fit. The backend also requeues these hourly.
 

@@ -155,7 +155,7 @@ Deviations from spec (and why):
 - The audit removed dead code the branch did not add (`verify_provider_models`, `get_response_format`), because it duplicated the chains and was the one provider HTTP call outside the dispatcher. F-5 now says nothing checks model IDs at startup.
 Open questions for the owner:
 - Pass 3's question still stands: keep hourly requeueing of `FAILED`/`PENDING` topics that failed domain validation (up to two writer calls per topic per hour)?
-- Should `UNREVIEWED` show a banner to learners? The handoff leaves it optional.
+- Should `UNREVIEWED` show a banner to learners? Answered 2026-11-18: no, it is not the learner's business. The handoff now says to remove the review banner.
 - Run the queued path once live (worker + Redis, one topic, then its rows in admin) before merging? It needs a worker, not beat.
 Notes for later passes:
 - None; this is the last pass. Follow-ups are F-9, F-11, F-12 and known bug 5.
