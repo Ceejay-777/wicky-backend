@@ -59,7 +59,7 @@ Code: `apps/learning/pipeline.py`, one Celery task per stage in `apps/learning/t
 
 `GET /topics/<id>` returns an empty `summary` and `resource_links` unless the status is `PASSED`, `FIXED` or `UNREVIEWED`. `POST /topics/<id>/retry` resets the regeneration count and verdict and starts a new cycle (also for `REJECTED`).
 
-## Why these settings (evidence, 2026-10-14)
+## Why these settings (evidence, 2026-10-14, full report in `docs/evidence/`)
 
 - **Always set `max_completion_tokens`.** Without it, reasoning tokens ate the room and JSON was cut off (the old `json_validate_failed` 400s). With 8192: 59/60 valid generations across all three models.
 - **Low/medium effort is enough.** 120b normal quiz: reasoning tokens ~800 -> ~50, latency 4s -> 3s, same validity.
@@ -73,6 +73,8 @@ Code: `apps/learning/pipeline.py`, one Celery task per stage in `apps/learning/t
 - Generated resource links are mostly dead or invented: 24 dead, 13 ok, 19 unverifiable of 56 (YouTube 13 dead / 1 ok). See `backlog/follow-ups.md` F-1.
 - About 1 in 5 quiz answer keys disagrees with a blind second model. See F-2.
 - Topic summaries (`topic-v1`) follow the four-paragraph plain-text shape, but one real sample (2026-11-17, level 2, gpt-oss-120b) came in under the 300-word target (284) and leaned conceptual rather than practical for its level. Worth looking at: length, how practical level 2 and 3 summaries are, and how far the last paragraph previews the next topic. A dedicated generation-quality pass will look at this in depth.
+
+- Live test 2026-11-18 (19 real lessons through the narrow review): about 1 lesson in 3 still held a wrong statement after checking and fixing, and the checker wrongly flagged 3 true statements. Report and raw data in `docs/evidence/2026-11-18-live-content-review/`; plan in `backlog/content-quality-plan.md` (F-10).
 
 ## Limits of the evidence
 

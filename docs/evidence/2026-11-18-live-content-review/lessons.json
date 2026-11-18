@@ -1,0 +1,1560 @@
+[
+ {
+  "id": 4,
+  "subject": "World War II: Pacific Theater",
+  "title": "Allied Initial Response",
+  "level": 1,
+  "status": "PASSED",
+  "verdict": {
+   "issues": [],
+   "reason": "The summary describes the Allied actions immediately after Pearl Harbor within the given level and boundaries.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "The Allied Initial Response refers to the actions taken by the United States and its partners in the weeks after the Japanese attack on Pearl Harbor on December 7, 1941. In a matter of days the Allies moved from peacetime routine to a full‑scale war footing, ordering ships out of repair yards, recalling reserve forces, and declaring war on Japan. This rapid shift set the stage for the first offensive moves in the Pacific.\n\nAllied Powers – the United States, United Kingdom, Australia, New Zealand and the Netherlands, who together opposed the Axis in the Pacific. War Council – a high‑level meeting of civilian and military leaders that coordinated strategy and resource allocation. Mobilization – the process of converting industry, transportation and manpower from civilian to military use. Pacific Fleet – the U.S. Navy's main striking force in the Pacific, which was reorganized under Admiral Nimitz after the attack. Code‑breaking – American cryptanalysts who began to read Japanese communications, giving the Allies early warning of future moves. Task Force – a temporary grouping of ships, aircraft and troops assembled for a specific operation, such as the early carrier raids on the Marshall Islands.\n\nThink of the Allied response like a fire alarm in a large building: the alarm rings (Pearl Harbor), and every floor's sprinkler system (the different branches of government, the navy, the factories) instantly turns on, sending water (troops, ships, supplies) to douse the flames before they spread. The speed and coordination of that reaction prevented the fire from engulfing the entire structure and bought time for a more organized effort.\n\nThis initial reaction matters because it turned a surprise attack into a decisive shift from defense to offense, allowing the Allies to seize the strategic initiative in the Pacific. The mobilized forces, new command structures, and early intelligence successes laid the groundwork for the Guadalcanal Campaign, the first major land offensive that would push Japanese expansion back and begin the long island‑hopping sequence toward victory.",
+  "original": "The Allied Initial Response refers to the actions taken by the United States and its partners in the weeks after the Japanese attack on Pearl Harbor on December 7, 1941. In a matter of days the Allies moved from peacetime routine to a full‑scale war footing, ordering ships out of repair yards, recalling reserve forces, and declaring war on Japan. This rapid shift set the stage for the first offensive moves in the Pacific.\n\nAllied Powers – the United States, United Kingdom, Australia, New Zealand and the Netherlands, who together opposed the Axis in the Pacific. War Council – a high‑level meeting of civilian and military leaders that coordinated strategy and resource allocation. Mobilization – the process of converting industry, transportation and manpower from civilian to military use. Pacific Fleet – the U.S. Navy’s main striking force in the Pacific, which was reorganized under Admiral Nimitz after the attack. Code‑breaking – American cryptanalysts who began to read Japanese communications, giving the Allies early warning of future moves. Task Force – a temporary grouping of ships, aircraft and troops assembled for a specific operation, such as the early carrier raids on the Marshall Islands.\n\nThink of the Allied response like a fire alarm in a large building: the alarm rings (Pearl Harbor), and every floor’s sprinkler system (the different branches of government, the navy, the factories) instantly turns on, sending water (troops, ships, supplies) to douse the flames before they spread. The speed and coordination of that reaction prevented the fire from engulfing the entire structure and bought time for a more organized effort.\n\nThis initial reaction matters because it turned a surprise attack into a decisive shift from defense to offense, allowing the Allies to seize the strategic initiative in the Pacific. The mobilized forces, new command structures, and early intelligence successes laid the groundwork for the Guadalcanal Campaign, the first major land offensive that would push Japanese expansion back and begin the long island‑hopping sequence toward victory.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/United_States_entry_into_World_War_II",
+    "type": "wikipedia",
+    "title": "United States entry into World War II"
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Pacific_War",
+    "type": "wikipedia",
+    "title": "World War II: Pacific War – Overview"
+   },
+   {
+    "url": "https://www.history.com/news/wwii-us-mobilization",
+    "type": "article",
+    "title": "How the United States Mobilized for War"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=V0gUeP4cUj8",
+    "type": "video",
+    "title": "Allied Response to Pearl Harbor Explained (Simple History)"
+   }
+  ],
+  "words": 328,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4697,
+    "tok": 2303,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 2583,
+    "tok": 1712,
+    "ann": {
+     "issues": [],
+     "reason": "The summary describes the Allied actions immediately after Pearl Harbor within the given level and boundaries.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 11,
+  "subject": "World War II: Pacific Theater",
+  "title": "Code Breaking and Intel",
+  "level": 2,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "'Ultra Pacific' is the collective nickname for the intelligence derived from JN‑25 and related sources.",
+     "problem": "The term \"Ultra Pacific\" is not a historically recognized nickname; \"Ultra\" referred to British codebreaking of German Enigma, and no such Pacific-specific nickname existed for JN‑25 intelligence.",
+     "correction": "Intelligence derived from JN‑25 was part of Allied signals intelligence efforts (e.g., Magic, OP‑20‑G) but was not collectively called \"Ultra Pacific.\""
+    }
+   ],
+   "reason": "The summary stays focused on WWII Pacific code breaking and intelligence at the appropriate level without deviating to other topics.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Code breaking and intelligence in the Pacific Theater refers to the systematic effort to intercept, decrypt, and exploit Japanese communications to gain strategic advantage. Building on the basic signals work introduced earlier, Allied cryptanalysts turned raw radio traffic into actionable insight that shaped battles, supply routes, and diplomatic moves. These efforts were coordinated by organizations like the U.S. Navy's OP-20-G and the Army's Signals Intelligence Service, which pooled linguists, mathematicians, and captured equipment to stay ahead of Japanese code changes.\n\nPURPLE is the Japanese diplomatic cipher whose compromise let the U.S. read high‑level negotiations. JN‑25 is the primary naval code used by the Imperial Japanese Navy, and its partial break gave clues to fleet movements. Traffic analysis is the study of message patterns to infer unit locations without decoding content. 'Magic' is the codename for the U.S. project that processed PURPLE decrypts. Intelligence derived from JN‑25 was part of Allied signals intelligence efforts (e.g., Magic, OP‑20‑G) but was not collectively called 'Ultra Pacific'. A codebook is the reference manual of cipher settings that analysts reconstructed through captured material. The 'Red Book' was the compilation of known Japanese code patterns that served as a reference for analysts during decryption attempts.\n\nWhen the U.S. forces prepared for the Battle of Midway, a handful of JN‑25 messages intercepted and partially decoded revealed the Japanese plan to strike a location they called 'AF', which analysts matched to Midway Island, allowing Admiral Nimitz to set an ambush that turned the tide of the war. The success at Midway is often compared to solving a complex puzzle where only a few pieces are visible, yet the picture becomes clear enough to predict the opponent's next move.\n\nThe intelligence breakthroughs turned abstract code work into decisive battlefield outcomes, showing how information superiority could outweigh raw firepower; this success fed directly into the broader Allied strategy of isolating Japan and set the stage for the next phase of the Pacific campaign, where secure lines of supply and coordination in the Burma Campaign would rely heavily on the same cryptologic foundations. As the Allies pushed northward, the same cryptanalytic networks would be essential for tracking Japanese supply routes along the Burma–Thailand border, making code breaking a linchpin for the upcoming Burma Campaign.",
+  "original": "Code breaking and intelligence in the Pacific Theater refers to the systematic effort to intercept, decrypt, and exploit Japanese communications to gain strategic advantage. Building on the basic signals work introduced earlier, Allied cryptanalysts turned raw radio traffic into actionable insight that shaped battles, supply routes, and diplomatic moves. These efforts were coordinated by organizations like the U.S. Navy's OP-20-G and the Army's Signals Intelligence Service, which pooled linguists, mathematicians, and captured equipment to stay ahead of Japanese code changes.\n\nPURPLE is the Japanese diplomatic cipher whose compromise let the U.S. read high‑level negotiations. JN‑25 is the primary naval code used by the Imperial Japanese Navy, and its partial break gave clues to fleet movements. Traffic analysis is the study of message patterns to infer unit locations without decoding content. 'Magic' is the codename for the U.S. project that processed PURPLE decrypts. 'Ultra Pacific' is the collective nickname for the intelligence derived from JN‑25 and related sources. A codebook is the reference manual of cipher settings that analysts reconstructed through captured material. The 'Red Book' was the compilation of known Japanese code patterns that served as a reference for analysts during decryption attempts.\n\nWhen the U.S. forces prepared for the Battle of Midway, a handful of JN‑25 messages intercepted and partially decoded revealed the Japanese plan to strike a location they called ‘AF’, which analysts matched to Midway Island, allowing Admiral Nimitz to set an ambush that turned the tide of the war. The success at Midway is often compared to solving a complex puzzle where only a few pieces are visible, yet the picture becomes clear enough to predict the opponent’s next move.\n\nThe intelligence breakthroughs turned abstract code work into decisive battlefield outcomes, showing how information superiority could outweigh raw firepower; this success fed directly into the broader Allied strategy of isolating Japan and set the stage for the next phase of the Pacific campaign, where secure lines of supply and coordination in the Burma Campaign would rely heavily on the same cryptologic foundations. As the Allies pushed northward, the same cryptanalytic networks would be essential for tracking Japanese supply routes along the Burma–Thailand border, making code breaking a linchpin for the upcoming Burma Campaign.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Signals_intelligence_in_World_War_II",
+    "type": "wikipedia",
+    "title": "Signals intelligence in World War II"
+   },
+   {
+    "url": "https://www.history.navy.mil/browse-by-topic/world-war-ii/war-at-sea/japanese-naval-code-jn-25.html",
+    "type": "article",
+    "title": "Japanese Naval Code JN‑25 – History and Impact"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=H6v5w9eZ3ZQ",
+    "type": "video",
+    "title": "How Codebreakers Won the Battle of Midway"
+   }
+  ],
+  "words": 373,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 9288,
+    "tok": 4137,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3492,
+    "tok": 2149,
+    "ann": {
+     "issues": [
+      {
+       "quote": "'Ultra Pacific' is the collective nickname for the intelligence derived from JN‑25 and related sources.",
+       "problem": "The term \"Ultra Pacific\" is not a historically recognized nickname; \"Ultra\" referred to British codebreaking of German Enigma, and no such Pacific-specific nickname existed for JN‑25 intelligence.",
+       "correction": "Intelligence derived from JN‑25 was part of Allied signals intelligence efforts (e.g., Magic, OP‑20‑G) but was not collectively called \"Ultra Pacific.\""
+      }
+     ],
+     "reason": "The summary stays focused on WWII Pacific code breaking and intelligence at the appropriate level without deviating to other topics.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 5172,
+    "tok": 2850,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 16,
+  "subject": "World War II: Pacific Theater",
+  "title": "Soviet Invasion of Manchuria",
+  "level": 2,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "yet Stalin declared it void once Germany fell, using the pact's collapse as legal cover.",
+     "problem": "The Soviet Union declared the Soviet–Japanese Neutrality Pact void on 5 April 1945, before Germany fell in May 1945.",
+     "correction": "yet Stalin declared it void on 5 April 1945, before Germany's surrender, using the pact's collapse as legal cover."
+    }
+   ],
+   "reason": "The summary discusses the Soviet invasion of Manchuria, its timing, operations, and impact, fitting the requested topic and level.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "The Soviet invasion of Manchuria, launched on 9 August 1945, was a massive offensive by the Red Army against Japanese forces in the puppet state of Manchukuo. Coming just days after the atomic bombings of Hiroshima and Nagasaki, it opened a new front in the Pacific Theater and forced Japan to confront a powerful, well‑equipped opponent on its own continent.\n\nOperation August Storm was the codename for the coordinated land, air, and river assaults that overwhelmed the Japanese Kwantung Army, which had been weakened by years of neglect and lacked modern armor. Manchukuo, the Japanese‑created \"state\" in northeastern China, served as a strategic buffer but offered little resistance once Soviet mechanized units crossed the Amur and Ussuri rivers. The Soviet–Japanese Neutrality Pact of 1941 had kept the two powers apart, yet Stalin declared it void on 5 April 1945, before Germany's surrender, using the pact's collapse as legal cover. The Red Army deployed over 1.5 million troops, 5,000 tanks, and thousands of aircraft, illustrating the scale of Soviet logistics and the effectiveness of combined‑arms warfare.\n\nThink of the Soviet push like a modern blitzkrieg: armored spearheads smashed through thin defensive lines while airborne units seized key bridges, and river flotillas swept inland, leaving the Japanese forces scrambling to regroup, much as German panzer divisions had done in France a decade earlier.\n\nThe invasion mattered because it shattered the illusion that Japan could defend its empire from a distant front, forcing Japanese leaders to confront an unavoidable loss of territory and resources. Soviet control of Manchuria also gave the Allies a foothold for post‑war negotiations over the region's political future, and the rapid collapse of the Kwantung Army directly set the stage for the formal Japanese surrender in September 1945. Understanding this offensive shows how military pressure from both the United States and the Soviet Union converged to end World war II in the Pacific.",
+  "original": "The Soviet invasion of Manchuria, launched on 9 August 1945, was a massive offensive by the Red Army against Japanese forces in the puppet state of Manchukuo. Coming just days after the atomic bombings of Hiroshima and Nagasaki, it opened a new front in the Pacific Theater and forced Japan to confront a powerful, well‑equipped opponent on its own continent.\n\nOperation August Storm was the codename for the coordinated land, air, and river assaults that overwhelmed the Japanese Kwantung Army, which had been weakened by years of neglect and lacked modern armor. Manchukuo, the Japanese‑created “state” in northeastern China, served as a strategic buffer but offered little resistance once Soviet mechanized units crossed the Amur and Ussuri rivers. The Soviet–Japanese Neutrality Pact of 1941 had kept the two powers apart, yet Stalin declared it void once Germany fell, using the pact’s collapse as legal cover. The Red Army deployed over 1.5 million troops, 5,000 tanks, and thousands of aircraft, illustrating the scale of Soviet logistics and the effectiveness of combined‑arms warfare.\n\nThink of the Soviet push like a modern blitzkrieg: armored spearheads smashed through thin defensive lines while airborne units seized key bridges, and river flotillas swept inland, leaving the Japanese forces scrambling to regroup, much as German panzer divisions had done in France a decade earlier.\n\nThe invasion mattered because it shattered the illusion that Japan could defend its empire from a distant front, forcing Japanese leaders to confront an unavoidable loss of territory and resources. Soviet control of Manchuria also gave the Allies a foothold for post‑war negotiations over the region’s political future, and the rapid collapse of the Kwantung Army directly set the stage for the formal Japanese surrender in September 1945. Understanding this offensive shows how military pressure from both the United States and the Soviet Union converged to end World War II in the Pacific.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Soviet_invasion_of_Manchuria",
+    "type": "wikipedia",
+    "title": "Soviet invasion of Manchuria – Wikipedia"
+   },
+   {
+    "url": "https://www.history.com/topics/world-war-ii/soviet-invasion-of-manchuria",
+    "type": "article",
+    "title": "Soviet invasion of Manchuria (1945) – History.com"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=YtXn8v0R7tM",
+    "type": "video",
+    "title": "Soviet August Storm – The 1945 Manchurian Campaign (YouTube)"
+   }
+  ],
+  "words": 314,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 6311,
+    "tok": 3053,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3007,
+    "tok": 1775,
+    "ann": {
+     "issues": [
+      {
+       "quote": "yet Stalin declared it void once Germany fell, using the pact's collapse as legal cover.",
+       "problem": "The Soviet Union declared the Soviet–Japanese Neutrality Pact void on 5 April 1945, before Germany fell in May 1945.",
+       "correction": "yet Stalin declared it void on 5 April 1945, before Germany's surrender, using the pact's collapse as legal cover."
+      }
+     ],
+     "reason": "The summary discusses the Soviet invasion of Manchuria, its timing, operations, and impact, fitting the requested topic and level.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 5082,
+    "tok": 2469,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 18,
+  "subject": "World War II: Pacific Theater",
+  "title": "Occupation and Reform",
+  "level": 3,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "the dissolution of the zaibatsu conglomerates to prevent economic monopolies;",
+     "problem": "The zaibatsu were not fully dissolved; they were broken up and later reformed into keiretsu, so stating they were dissolved is inaccurate.",
+     "correction": "the breakup of the zaibatsu conglomerates, which reduced their power and led to the emergence of keiretsu structures, to limit economic monopolies;"
+    }
+   ],
+   "reason": "The summary accurately describes the Allied occupation and reform of Japan within the scope of the topic.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Occupation and Reform describes the Allied—chiefly United States—administration of Japan from 1945 to 1952, during which sweeping political, economic, and social changes were imposed to transform a militaristic empire into a peaceful democratic state. The effort began immediately after the Japanese surrender and was guided by General Douglas MacArthur as Supreme Commander for the Allied Powers, aiming to dismantle the war‑making structures while rebuilding civil society. Beyond political restructuring, the occupation introduced labor rights, revived the press, and fostered a market economy that would later become a global powerhouse.\n\nKey terms include SCAP, the umbrella authority that directed all reforms; the 1947 Constitution, which introduced popular sovereignty, renounced war, and granted universal suffrage, especially to women; land reform, which broke up large estates and gave tenant farmers ownership; the breakup of the zaibatsu conglomerates, which reduced their power and led to the emergence of keiretsu structures, to limit economic monopolies; demilitarization, which disbanded the army and navy; and education overhaul, which emphasized pacifist curricula and critical thinking. Women gained the right to vote for the first time, and new labor unions were encouraged to give workers a voice in the emerging industrial sector.\n\nImagine a sprawling feudal estate that has been divided into dozens of modest family farms; each new owner now cultivates a plot they can sell or pass to their children. This mirrors Japan's post‑war land reform, where the government bought up the holdings of powerful landlords and redistributed them, dramatically reducing rural inequality and weakening the traditional patron‑client networks that had supported militarism. Similarly, the overhaul of textbooks replaced militarist narratives with lessons on peace and international cooperation, helping a generation to re‑imagine Japan's role in the world.\n\nThe occupation's reforms laid the institutional groundwork for Japan's rapid economic recovery, its pacifist foreign policy, and a civil society that values democratic participation, all of which shape the strategic landscape of the Cold War Pacific. Understanding these changes clarifies why the subsequent war‑crimes trials were not only about punishment but also about legitimizing a new political order, linking the moral reckoning of the tribunals to the broader project of rebuilding a peaceful Japan. The reformed Japan later became a key U.S. ally, hosting American bases that projected power across East Asia, a direct outcome of the occupation's strategic vision.",
+  "original": "Occupation and Reform describes the Allied—chiefly United States—administration of Japan from 1945 to 1952, during which sweeping political, economic, and social changes were imposed to transform a militaristic empire into a peaceful democratic state. The effort began immediately after the Japanese surrender and was guided by General Douglas MacArthur as Supreme Commander for the Allied Powers, aiming to dismantle the war‑making structures while rebuilding civil society. Beyond political restructuring, the occupation introduced labor rights, revived the press, and fostered a market economy that would later become a global powerhouse.\n\nKey terms include SCAP, the umbrella authority that directed all reforms; the 1947 Constitution, which introduced popular sovereignty, renounced war, and granted universal suffrage, especially to women; land reform, which broke up large estates and gave tenant farmers ownership; the dissolution of the zaibatsu conglomerates to prevent economic monopolies; demilitarization, which disbanded the army and navy; and education overhaul, which emphasized pacifist curricula and critical thinking. Women gained the right to vote for the first time, and new labor unions were encouraged to give workers a voice in the emerging industrial sector.\n\nImagine a sprawling feudal estate that has been divided into dozens of modest family farms; each new owner now cultivates a plot they can sell or pass to their children. This mirrors Japan’s post‑war land reform, where the government bought up the holdings of powerful landlords and redistributed them, dramatically reducing rural inequality and weakening the traditional patron‑client networks that had supported militarism. Similarly, the overhaul of textbooks replaced militarist narratives with lessons on peace and international cooperation, helping a generation to re‑imagine Japan’s role in the world.\n\nThe occupation’s reforms laid the institutional groundwork for Japan’s rapid economic recovery, its pacifist foreign policy, and a civil society that values democratic participation, all of which shape the strategic landscape of the Cold War Pacific. Understanding these changes clarifies why the subsequent war‑crimes trials were not only about punishment but also about legitimizing a new political order, linking the moral reckoning of the tribunals to the broader project of rebuilding a peaceful Japan. The reformed Japan later became a key U.S. ally, hosting American bases that projected power across East Asia, a direct outcome of the occupation’s strategic vision.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Occupation_of_Japan",
+    "type": "wikipedia",
+    "title": "Occupation of Japan (Wikipedia)"
+   },
+   {
+    "url": "https://www.history.com/topics/world-war-ii/japan-occupation",
+    "type": "article",
+    "title": "Japan’s Postwar Reconstruction (History.com)"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=R6g6G9Vb8xU",
+    "type": "video",
+    "title": "The American Occupation of Japan (Documentary)"
+   }
+  ],
+  "words": 381,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 7452,
+    "tok": 3666,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4535,
+    "tok": 2536,
+    "ann": {
+     "issues": [
+      {
+       "quote": "the dissolution of the zaibatsu conglomerates to prevent economic monopolies;",
+       "problem": "The zaibatsu were not fully dissolved; they were broken up and later reformed into keiretsu, so stating they were dissolved is inaccurate.",
+       "correction": "the breakup of the zaibatsu conglomerates, which reduced their power and led to the emergence of keiretsu structures, to limit economic monopolies;"
+      }
+     ],
+     "reason": "The summary accurately describes the Allied occupation and reform of Japan within the scope of the topic.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4252,
+    "tok": 2425,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 67,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Proto-Niger‑Congo Roots of Yoruba",
+  "level": 1,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "A concrete example is the Yoruba word \"ìyá\" meaning \"mother\" which matches the Proto‑Niger‑Congo root *-ma‑ for mother found in related languages like Zulu \"umama\" and the Mande language \"ma\".",
+     "problem": "The Yoruba word \"ìyá\" is not derived from the Proto‑Niger‑Congo *-ma‑ root for mother and is not cognate with Zulu \"umama\" or Mande \"ma\".",
+     "correction": "A concrete example is the Yoruba word \"ìyá\" meaning \"mother\"; while many Niger‑Congo languages have a root *-ma‑ for mother (e.g., Zulu \"umama\"), the Yoruba term comes from a different Proto‑Yoruba lineage and is not directly cognate with *-ma‑."
+    }
+   ],
+   "reason": "The summary explains Proto‑Niger‑Congo linguistic roots relevant to Yoruba as requested and stays within the specified scope.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Proto‑Niger‑Congo roots of Yoruba refer to the ancient linguistic building blocks that Yoruba inherited from the wider Proto‑Niger‑Congo family, the ancestral tongue of hundreds of languages across sub‑Saharan Africa. In simple terms, scholars trace how bits of sound and meaning from this prehistoric language survived and reshaped themselves into modern Yoruba, building on the broader historical timeline of Yoruba settlement.\n\nKey terms include Proto‑Niger‑Congo, the reconstructed ancestor of many African languages; root, the basic sound‑meaning unit that can combine to form words; cognate, a word in Yoruba that looks like a word in another Niger‑Congo language because they share a common origin; sound change, the regular ways sounds shift over centuries; and tonality, the pitch patterns that give meaning in Yoruba and many Niger‑Congo tongues. Each of these ideas helps linguists map connections across time.\n\nA concrete example is the Yoruba word \"ìyá\" meaning \"mother\"; while many Niger‑Congo languages have a root *-ma‑ for mother (e.g., Zulu \"umama\"), the Yoruba term comes from a different Proto‑Yoruba lineage and is not directly cognate with *-ma‑. The similarity shows how a single ancient root diversified into distinct yet recognizably related forms, much like how the English word \"father\" and the German \"Vater\" share a common Germanic ancestor.\n\nUnderstanding these roots matters because they reveal the deep genetic ties that bind Yoruba to a massive language family, showing that Yoruba is not an isolated invention but part of a long‑running linguistic evolution. This foundation prepares the learner for the next topic, Early Written Records of Yoruba, where the abstract roots become visible in the earliest scripts and inscriptions, turning invisible sound changes into tangible historical evidence.",
+  "original": "Proto‑Niger‑Congo roots of Yoruba refer to the ancient linguistic building blocks that Yoruba inherited from the wider Proto‑Niger‑Congo family, the ancestral tongue of hundreds of languages across sub‑Saharan Africa. In simple terms, scholars trace how bits of sound and meaning from this prehistoric language survived and reshaped themselves into modern Yoruba, building on the broader historical timeline of Yoruba settlement.\n\nKey terms include Proto‑Niger‑Congo, the reconstructed ancestor of many African languages; root, the basic sound‑meaning unit that can combine to form words; cognate, a word in Yoruba that looks like a word in another Niger‑Congo language because they share a common origin; sound change, the regular ways sounds shift over centuries; and tonality, the pitch patterns that give meaning in Yoruba and many Niger‑Congo tongues. Each of these ideas helps linguists map connections across time.\n\nA concrete example is the Yoruba word \"ìyá\" meaning \"mother\" which matches the Proto‑Niger‑Congo root *-ma‑ for mother found in related languages like Zulu \"umama\" and the Mande language \"ma\". The similarity shows how a single ancient root diversified into distinct yet recognizably related forms, much like how the English word \"father\" and the German \"Vater\" share a common Germanic ancestor.\n\nUnderstanding these roots matters because they reveal the deep genetic ties that bind Yoruba to a massive language family, showing that Yoruba is not an isolated invention but part of a long‑running linguistic evolution. This foundation prepares the learner for the next topic, Early Written Records of Yoruba, where the abstract roots become visible in the earliest scripts and inscriptions, turning invisible sound changes into tangible historical evidence.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Proto-Niger%E2%80%93Congo_language",
+    "type": "wikipedia",
+    "title": "Proto-Niger‑Congo language - Wikipedia"
+   },
+   {
+    "url": "https://www.britannica.com/topic/Yoruba-language",
+    "type": "article",
+    "title": "Yoruba language - Britannica article"
+   },
+   {
+    "url": "https://www.researchgate.net/publication/281123456_Proto_Niger-Congo_and_the_Origins_of_Yoruba",
+    "type": "article",
+    "title": "Proto‑Niger‑Congo and the Origins of Yoruba – ResearchGate"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=Kx5zZQx9sYc",
+    "type": "video",
+    "title": "Yoruba Language History – Visual Overview"
+   }
+  ],
+  "words": 273,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3891,
+    "tok": 1878,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3917,
+    "tok": 2138,
+    "ann": {
+     "issues": [
+      {
+       "quote": "A concrete example is the Yoruba word \"ìyá\" meaning \"mother\" which matches the Proto‑Niger‑Congo root *-ma‑ for mother found in related languages like Zulu \"umama\" and the Mande language \"ma\".",
+       "problem": "The Yoruba word \"ìyá\" is not derived from the Proto‑Niger‑Congo *-ma‑ root for mother and is not cognate with Zulu \"umama\" or Mande \"ma\".",
+       "correction": "A concrete example is the Yoruba word \"ìyá\" meaning \"mother\"; while many Niger‑Congo languages have a root *-ma‑ for mother (e.g., Zulu \"umama\"), the Yoruba term comes from a different Proto‑Yoruba lineage and is not directly cognate with *-ma‑."
+      }
+     ],
+     "reason": "The summary explains Proto‑Niger‑Congo linguistic roots relevant to Yoruba as requested and stays within the specified scope.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 5892,
+    "tok": 3008,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 69,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Influence of Neighboring Languages",
+  "level": 1,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "In linguistic terms, the Yoruba word \"sùúrù\" (patience) shows a pattern similar to the Hausa word \"sura\" with a comparable meaning, suggesting a borrowing that entered everyday speech through trade interactions.",
+     "problem": "The claim that Yoruba \"sùúrù\" is similar to Hausa \"sura\" and represents a borrowing is incorrect; \"sùúrù\" is derived from Arabic \"sabr,\" not from Hausa.",
+     "correction": "In linguistic terms, the Yoruba word \"sùúrù\" (patience) is derived from Arabic \"sabr\" and is not a borrowing from Hausa."
+    }
+   ],
+   "reason": "The summary explains how neighboring languages have influenced Yoruba, which matches the assigned topic and level.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Influence of neighboring languages refers to the ways that languages spoken close to Yoruba—such as Igbo, Hausa, and the various Edo languages—have left marks on its words, sounds, and grammar. When Yoruba began to form as a distinct language, its speakers lived among other groups and regularly exchanged ideas, trade goods, and stories, which created opportunities for linguistic borrowing. This process built on the foundation described in the earlier topic on early written records, where we saw the first scripts capturing Yoruba words, some of which already show traces of contact.\n\nKey terms include language contact, the situation where speakers of different languages interact and influence each other; borrowing, the adoption of words or structures from another language (for example, Yoruba \"bàtà\" for shoe comes from Portuguese via trade). A substrate language is the original language of a region that leaves hidden patterns in a newer dominant language, while a superstrate is the dominant language that contributes overt features. Areal features are similarities that spread across languages in a geographic area regardless of family ties. Lexical loan refers specifically to borrowed vocabulary, and code‑switching is the practice of alternating between languages in conversation. A lingua franca is a common language used for trade or diplomacy, such as Hausa in parts of West Africa, which can spread its words into neighboring tongues.\n\nA simple analogy is to picture languages as neighboring kitchens. If a chef from one kitchen (Yoruba speakers) often borrows spices, cooking tools, or recipes from the next kitchen (Hausa speakers), the dishes they prepare will taste a little different—maybe a hint of cumin in a stew that originally never used it. In linguistic terms, the Yoruba word \"sùúrù\" (patience) is derived from Arabic \"sabr\" and is not a borrowing from Hausa.\n\nUnderstanding these influences matters because it shows that Yoruba did not develop in isolation; its vocabulary and some grammatical quirks are the product of centuries of contact. Recognizing borrowed elements helps scholars separate what is uniquely Yoruba from what came from neighbors, which is essential before moving on to the next step: the phonological foundations of Yoruba, where we will examine the sound system that underlies both native and borrowed words.",
+  "original": "Influence of neighboring languages refers to the ways that languages spoken close to Yoruba—such as Igbo, Hausa, and the various Edo languages—have left marks on its words, sounds, and grammar. When Yoruba began to form as a distinct language, its speakers lived among other groups and regularly exchanged ideas, trade goods, and stories, which created opportunities for linguistic borrowing. This process built on the foundation described in the earlier topic on early written records, where we saw the first scripts capturing Yoruba words, some of which already show traces of contact.\n\nKey terms include language contact, the situation where speakers of different languages interact and influence each other; borrowing, the adoption of words or structures from another language (for example, Yoruba \"bàtà\" for shoe comes from Portuguese via trade). A substrate language is the original language of a region that leaves hidden patterns in a newer dominant language, while a superstrate is the dominant language that contributes overt features. Areal features are similarities that spread across languages in a geographic area regardless of family ties. Lexical loan refers specifically to borrowed vocabulary, and code‑switching is the practice of alternating between languages in conversation. A lingua franca is a common language used for trade or diplomacy, such as Hausa in parts of West Africa, which can spread its words into neighboring tongues.\n\nA simple analogy is to picture languages as neighboring kitchens. If a chef from one kitchen (Yoruba speakers) often borrows spices, cooking tools, or recipes from the next kitchen (Hausa speakers), the dishes they prepare will taste a little different—maybe a hint of cumin in a stew that originally never used it. In linguistic terms, the Yoruba word \"sùúrù\" (patience) shows a pattern similar to the Hausa word \"sura\" with a comparable meaning, suggesting a borrowing that entered everyday speech through trade interactions.\n\nUnderstanding these influences matters because it shows that Yoruba did not develop in isolation; its vocabulary and some grammatical quirks are the product of centuries of contact. Recognizing borrowed elements helps scholars separate what is uniquely Yoruba from what came from neighbors, which is essential before moving on to the next step: the phonological foundations of Yoruba, where we will examine the sound system that underlies both native and borrowed words.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language - Wikipedia"
+   },
+   {
+    "url": "https://www.ethnologue.com/language/yor",
+    "type": "article",
+    "title": "Yoruba language profile - Ethnologue"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=I3v2T6e3Z5Y",
+    "type": "video",
+    "title": "Yoruba Language: History and Influences"
+   }
+  ],
+  "words": 364,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 5008,
+    "tok": 2007,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3296,
+    "tok": 1919,
+    "ann": {
+     "issues": [
+      {
+       "quote": "In linguistic terms, the Yoruba word \"sùúrù\" (patience) shows a pattern similar to the Hausa word \"sura\" with a comparable meaning, suggesting a borrowing that entered everyday speech through trade interactions.",
+       "problem": "The claim that Yoruba \"sùúrù\" is similar to Hausa \"sura\" and represents a borrowing is incorrect; \"sùúrù\" is derived from Arabic \"sabr,\" not from Hausa.",
+       "correction": "In linguistic terms, the Yoruba word \"sùúrù\" (patience) is derived from Arabic \"sabr\" and is not a borrowing from Hausa."
+      }
+     ],
+     "reason": "The summary explains how neighboring languages have influenced Yoruba, which matches the assigned topic and level.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4687,
+    "tok": 2653,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 71,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Basic Yoruba Morphosyntax",
+  "level": 1,
+  "status": "PASSED",
+  "verdict": {
+   "issues": [],
+   "reason": "The summary correctly introduces basic Yoruba morphosyntax concepts appropriate for a newcomer without delving into other topics.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Basic Yoruba morphosyntax is the study of how Yoruba words are built and combined into sentences. It looks at the shapes (morphology) that words take when they change for tense, number, or possession, and the rules (syntax) that decide the order of those words. This builds on the sounds you learned in the phonology overview, because the way sounds combine influences the forms of words.\n\nA noun is a word that names a person, place, thing, or idea, and in Yoruba nouns do not change form for plural – instead a separate word or a tone change signals many. A verb is a word that describes an action or state, and Yoruba verbs are marked mainly by tense‑aspect particles that appear before the verb rather than by internal changes. The basic word order is Subject‑Verb‑Object (SVO), so the subject comes first, followed by the verb, then the object. A pronoun clitic is a short pronoun that attaches to a verb or noun, for example \"mi\" meaning \"my\" in \"ilé mi\" (my house). Serial verb constructions let two or more verbs sit together to show a sequence of actions, such as \"ọ́ ń rìn, ń sùn\" (he walks, then sleeps). Tone marking is crucial because the same segmental shape can have different meanings depending on high, mid, or low tone.\n\nConsider the simple sentence \"Ọmọ náà ń ṣeré\" which means \"The child is playing.\" \"Ọmọ\" means child, \"náà\" is a demonstrative meaning \"that,\" and \"ń\" is the progressive aspect particle that shows the action is ongoing. \"Ṣeré\" is the verb \"to play.\" Putting them together in the order Subject‑Aspect‑Verb follows the SVO pattern, and the tones on each syllable tell the listener exactly which words are intended. Think of it like LEGO bricks: each brick (morpheme) has a fixed shape, and the way you snap them together follows a clear instruction manual (syntax) to build a recognizable model (sentence).\n\nUnderstanding Yoruba morphosyntax matters because it reveals how meaning is constructed from smaller parts, which is the foundation for reading, writing, and translating the language. It also shows why later lexical borrowing from Arabic and Portuguese will fit into the existing grammatical pattern rather than overturn it, preparing you for the next topic on how new words are adapted into Yoruba sentences.",
+  "original": "Basic Yoruba morphosyntax is the study of how Yoruba words are built and combined into sentences. It looks at the shapes (morphology) that words take when they change for tense, number, or possession, and the rules (syntax) that decide the order of those words. This builds on the sounds you learned in the phonology overview, because the way sounds combine influences the forms of words.\n\nA noun is a word that names a person, place, thing, or idea, and in Yoruba nouns do not change form for plural – instead a separate word or a tone change signals many. A verb is a word that describes an action or state, and Yoruba verbs are marked mainly by tense‑aspect particles that appear before the verb rather than by internal changes. The basic word order is Subject‑Verb‑Object (SVO), so the subject comes first, followed by the verb, then the object. A pronoun clitic is a short pronoun that attaches to a verb or noun, for example \"mi\" meaning \"my\" in \"ilé mi\" (my house). Serial verb constructions let two or more verbs sit together to show a sequence of actions, such as \"ọ́ ń rìn, ń sùn\" (he walks, then sleeps). Tone marking is crucial because the same segmental shape can have different meanings depending on high, mid, or low tone.\n\nConsider the simple sentence \"Ọmọ náà ń ṣeré\" which means “The child is playing.” \"Ọmọ\" means child, \"náà\" is a demonstrative meaning “that,” and \"ń\" is the progressive aspect particle that shows the action is ongoing. \"Ṣeré\" is the verb “to play.” Putting them together in the order Subject‑Aspect‑Verb follows the SVO pattern, and the tones on each syllable tell the listener exactly which words are intended. Think of it like LEGO bricks: each brick (morpheme) has a fixed shape, and the way you snap them together follows a clear instruction manual (syntax) to build a recognizable model (sentence).\n\nUnderstanding Yoruba morphosyntax matters because it reveals how meaning is constructed from smaller parts, which is the foundation for reading, writing, and translating the language. It also shows why later lexical borrowing from Arabic and Portuguese will fit into the existing grammatical pattern rather than overturn it, preparing you for the next topic on how new words are adapted into Yoruba sentences.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language - Wikipedia"
+   },
+   {
+    "url": "https://www.britannica.com/topic/Yoruba-language",
+    "type": "article",
+    "title": "Yoruba language entry - Britannica"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=VhK3nM1ZVbQ",
+    "type": "video",
+    "title": "Yoruba Grammar Basics (Video)"
+   }
+  ],
+  "words": 380,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4325,
+    "tok": 2236,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4075,
+    "tok": 2400,
+    "ann": {
+     "issues": [],
+     "reason": "The summary correctly introduces basic Yoruba morphosyntax concepts appropriate for a newcomer without delving into other topics.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 72,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Lexical Borrowing from Arabic and Portuguese",
+  "level": 2,
+  "status": "PASSED",
+  "verdict": {
+   "issues": [],
+   "reason": "The summary discusses lexical borrowing from Arabic and Portuguese into Yoruba at the appropriate level and respects the given boundaries.",
+   "dropped": 1,
+   "on_topic": true
+  },
+  "final": "Lexical borrowing from Arabic and Portuguese refers to the way Yoruba has taken words, sounds, and sometimes whole expressions from these two languages over centuries of trade, religion, and colonisation, enriching its vocabulary while keeping its core grammatical structure intact. After the basic morphosyntax of Yoruba was covered, this level looks at how external contact reshapes the lexicon, showing that language change is a lived, pragmatic process rather than a purely abstract rule set.\n\nKey terms include loanword, a lexical item adopted directly from another language with little alteration; calque, a phrase translated piece‑by‑piece, such as a Yoruba idiom rendered from an Arabic expression; semantic shift, where a borrowed word acquires a new meaning in Yoruba usage; contact language, the social setting—markets, mosques, or plantations—where speakers of different tongues interact; and code‑switching, the occasional blending of Yoruba with Arabic or Portuguese in conversation, which often signals identity or expertise.\n\nA concrete illustration is the Yoruba word bàtà (shoe), which entered the language in the 16th century via Portuguese bàta, originally meaning a kind of boot. Another vivid case is sùgà (sugar), which traveled from Arabic sukkar to Portuguese açúcar before reaching Yoruba, where it now denotes the sweet commodity itself. These borrowings are not random; they arrived with the items they name—European shoes and the globally traded sugar—making the lexical layers easy to trace in everyday speech.\n\nUnderstanding these borrowings matters because they reveal how Yoruba adapted to new cultural and economic realities while preserving its grammatical core, a theme that will reappear when we examine how the language is recorded. The next module on transcription systems—Ajami (Arabic script) and Latin orthographies—shows how the very same Arabic and Portuguese influences shape the way Yoruba is written, turning borrowed sounds into visual symbols and completing the picture of linguistic contact in both spoken and written form.",
+  "original": "Lexical borrowing from Arabic and Portuguese refers to the way Yoruba has taken words, sounds, and sometimes whole expressions from these two languages over centuries of trade, religion, and colonisation, enriching its vocabulary while keeping its core grammatical structure intact. After the basic morphosyntax of Yoruba was covered, this level looks at how external contact reshapes the lexicon, showing that language change is a lived, pragmatic process rather than a purely abstract rule set.\n\nKey terms include loanword, a lexical item adopted directly from another language with little alteration; calque, a phrase translated piece‑by‑piece, such as a Yoruba idiom rendered from an Arabic expression; semantic shift, where a borrowed word acquires a new meaning in Yoruba usage; contact language, the social setting—markets, mosques, or plantations—where speakers of different tongues interact; and code‑switching, the occasional blending of Yoruba with Arabic or Portuguese in conversation, which often signals identity or expertise.\n\nA concrete illustration is the Yoruba word bàtà (shoe), which entered the language in the 16th century via Portuguese bàta, originally meaning a kind of boot. Another vivid case is sùgà (sugar), which traveled from Arabic sukkar to Portuguese açúcar before reaching Yoruba, where it now denotes the sweet commodity itself. These borrowings are not random; they arrived with the items they name—European shoes and the globally traded sugar—making the lexical layers easy to trace in everyday speech.\n\nUnderstanding these borrowings matters because they reveal how Yoruba adapted to new cultural and economic realities while preserving its grammatical core, a theme that will reappear when we examine how the language is recorded. The next module on transcription systems—Ajami (Arabic script) and Latin orthographies—shows how the very same Arabic and Portuguese influences shape the way Yoruba is written, turning borrowed sounds into visual symbols and completing the picture of linguistic contact in both spoken and written form.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language"
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Arabic_language_in_Africa",
+    "type": "wikipedia",
+    "title": "Arabic language in Africa"
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Portuguese_language_in_Africa",
+    "type": "wikipedia",
+    "title": "Portuguese language in Africa"
+   }
+  ],
+  "words": 305,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 7923,
+    "tok": 2659,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4321,
+    "tok": 2213,
+    "ann": {
+     "issues": [],
+     "reason": "The summary discusses lexical borrowing from Arabic and Portuguese into Yoruba at the appropriate level and respects the given boundaries.",
+     "dropped": 1,
+     "on_topic": true
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 74,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Classical Yoruba Literature Analysis",
+  "level": 2,
+  "status": "PASSED",
+  "verdict": {
+   "issues": [],
+   "reason": "The summary discusses classical Yoruba literature analysis, covering oral tradition, the Ifa corpus, ewi, and their relevance, which aligns with the requested topic and level.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Classical Yoruba literature analysis is the scholarly examination of the rich body of pre‑colonial Yoruba texts, both oral and early written, that convey myth, history, and ethical thought. Building on the basics of transcription systems you already studied, this level looks beyond the mechanics of writing to explore how stories, proverbs, praise poetry, and ritual chants are structured, interpreted, and transmitted within the cultural fabric of the Yoruba people.\n\nOral tradition refers to the performance‑based mode through which most early Yoruba works were memorized and shared across generations. Ifa corpus denotes the collection of divinatory verses that form the theological backbone of Yoruba literature, providing a structured repository of myths and moral lessons. Ewi is the formal genre of praise poetry, characterized by intricate meter, alliteration, and layered metaphor. Odu represents the encoded narrative units within the Ifa corpus, each acting like a chapter that can be recombined in divination. Literary motifs such as the trickster hare or the heroic founder encapsulate cultural values and appear repeatedly across disparate texts. Metaphorical syntax describes the way Yoruba speakers embed proverbs and symbolic language directly into narrative flow, turning everyday speech into a literary device.\n\nImagine a classic ewi honoring the legendary king Oduduwa as a musical composition: the repeated refrain of his name functions like a chorus, the rhythmic beats of the drum language set the tempo, and each metaphorical flourish acts as an ornamental riff that both delights the listener and reinforces the poem's moral message. By breaking the poem into its constituent rhythmic and semantic units, scholars can trace how the poet manipulates sound patterns to encode historical claims, just as a musicologist might identify a composer's signature motif across different works.\n\nUnderstanding how classical texts are constructed equips you to recognize the linguistic fingerprints that later diversify into regional dialects, which is the focus of the upcoming module on dialectal variation across Yoruba states. The analytical tools you develop here—identifying recurring motifs, decoding metaphorical syntax, and mapping oral‑to‑written transitions—will let you see how subtle shifts in pronunciation, vocabulary, or narrative style signal the emergence of distinct dialects. Moreover, appreciating the literary logic of the Ifa corpus and ewi provides a cultural lens for interpreting dialectal differences not as errors but as creative adaptations of a shared heritage. This continuity ensures that the next topic feels like a natural extension rather than a disconnected new chapter.",
+  "original": "Classical Yoruba literature analysis is the scholarly examination of the rich body of pre‑colonial Yoruba texts, both oral and early written, that convey myth, history, and ethical thought. Building on the basics of transcription systems you already studied, this level looks beyond the mechanics of writing to explore how stories, proverbs, praise poetry, and ritual chants are structured, interpreted, and transmitted within the cultural fabric of the Yoruba people.\n\nOral tradition refers to the performance‑based mode through which most early Yoruba works were memorized and shared across generations. Ifa corpus denotes the collection of divinatory verses that form the theological backbone of Yoruba literature, providing a structured repository of myths and moral lessons. Ewi is the formal genre of praise poetry, characterized by intricate meter, alliteration, and layered metaphor. Odu represents the encoded narrative units within the Ifa corpus, each acting like a chapter that can be recombined in divination. Literary motifs such as the trickster hare or the heroic founder encapsulate cultural values and appear repeatedly across disparate texts. Metaphorical syntax describes the way Yoruba speakers embed proverbs and symbolic language directly into narrative flow, turning everyday speech into a literary device.\n\nImagine a classic ewi honoring the legendary king Oduduwa as a musical composition: the repeated refrain of his name functions like a chorus, the rhythmic beats of the drum language set the tempo, and each metaphorical flourish acts as an ornamental riff that both delights the listener and reinforces the poem’s moral message. By breaking the poem into its constituent rhythmic and semantic units, scholars can trace how the poet manipulates sound patterns to encode historical claims, just as a musicologist might identify a composer’s signature motif across different works.\n\nUnderstanding how classical texts are constructed equips you to recognize the linguistic fingerprints that later diversify into regional dialects, which is the focus of the upcoming module on dialectal variation across Yoruba states. The analytical tools you develop here—identifying recurring motifs, decoding metaphorical syntax, and mapping oral‑to‑written transitions—will let you see how subtle shifts in pronunciation, vocabulary, or narrative style signal the emergence of distinct dialects. Moreover, appreciating the literary logic of the Ifa corpus and ewi provides a cultural lens for interpreting dialectal differences not as errors but as creative adaptations of a shared heritage. This continuity ensures that the next topic feels like a natural extension rather than a disconnected new chapter.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_literature",
+    "type": "wikipedia",
+    "title": "Yoruba literature - Wikipedia"
+   },
+   {
+    "url": "https://www.britannica.com/topic/Ifa-Religion",
+    "type": "article",
+    "title": "Ifá – The Yoruba Divination System"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=5iK9gXJZ1VY",
+    "type": "video",
+    "title": "Yoruba Praise Poetry (Ewi) – An Introduction"
+   }
+  ],
+  "words": 397,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 7364,
+    "tok": 3626,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3807,
+    "tok": 2045,
+    "ann": {
+     "issues": [],
+     "reason": "The summary discusses classical Yoruba literature analysis, covering oral tradition, the Ifa corpus, ewi, and their relevance, which aligns with the requested topic and level.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 75,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Dialectal Variation Across Yoruba States",
+  "level": 2,
+  "status": "PASSED",
+  "verdict": {
+   "issues": [],
+   "reason": "The summary discusses dialectal variation across Yoruba states, matching the assigned topic and level.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Dialectal variation across Yoruba states refers to the systematic differences in pronunciation, vocabulary, and grammar that appear among Yoruba‑speaking communities spread across Nigeria, Benin, and Togo. Although speakers share a common literary standard, everyday speech in Lagos, Oyo, Ibadan, or the Republic of Benin shows distinct phonological shifts, lexical choices, and syntactic patterns that have emerged through centuries of migration, trade, and contact with neighboring languages.\n\nDialect continuum describes how neighboring Yoruba varieties blend into one another with no sharp boundaries, making each speech community part of a gradual chain of mutual intelligibility. Tone sandhi refers to the predictable changes in pitch that occur when tones from adjacent words interact, a phenomenon that varies noticeably between the Oyo and Ekiti dialects. Lexical borrowing captures the way Yoruba speakers incorporate words from Hausa, English, or French, creating region‑specific vocabularies that signal trade routes and colonial history. Isogloss marks a line on a map where a particular linguistic feature—such as the use of 'òun' for 'food' versus 'oun'—shifts from one form to another, helping linguists visualize dialect boundaries. Standard Yoruba is the codified variety used in education, media, and literature, but it coexists with regional speech that retains historic phonetic and semantic quirks.\n\nFor instance, the verb meaning 'to go' is pronounced 'lọ́' in the Lagos dialect, while speakers in the Ijebu area often say 'lọ̀ọ̀' with a lengthened vowel and a slightly lower tone; the difference is comparable to how an American might say 'car' versus a Briton's 'cah', a small shift that nevertheless signals regional identity.\n\nUnderstanding these dialectal patterns is essential for tracing how Yoruba has adapted to social pressures, because the distribution of phonological and lexical variants often mirrors migration routes, trade networks, and contact with neighboring ethnic groups; this insight prepares learners for the upcoming exploration of sociohistorical contexts of language change, where the same evidence will be used to explain why languages evolve over time.",
+  "original": "Dialectal variation across Yoruba states refers to the systematic differences in pronunciation, vocabulary, and grammar that appear among Yoruba‑speaking communities spread across Nigeria, Benin, and Togo. Although speakers share a common literary standard, everyday speech in Lagos, Oyo, Ibadan, or the Republic of Benin shows distinct phonological shifts, lexical choices, and syntactic patterns that have emerged through centuries of migration, trade, and contact with neighboring languages.\n\nDialect continuum describes how neighboring Yoruba varieties blend into one another with no sharp boundaries, making each speech community part of a gradual chain of mutual intelligibility. Tone sandhi refers to the predictable changes in pitch that occur when tones from adjacent words interact, a phenomenon that varies noticeably between the Oyo and Ekiti dialects. Lexical borrowing captures the way Yoruba speakers incorporate words from Hausa, English, or French, creating region‑specific vocabularies that signal trade routes and colonial history. Isogloss marks a line on a map where a particular linguistic feature—such as the use of ‘òun’ for ‘food’ versus ‘oun’—shifts from one form to another, helping linguists visualize dialect boundaries. Standard Yoruba is the codified variety used in education, media, and literature, but it coexists with regional speech that retains historic phonetic and semantic quirks.\n\nFor instance, the verb meaning ‘to go’ is pronounced ‘lọ́’ in the Lagos dialect, while speakers in the Ijebu area often say ‘lọ̀ọ̀’ with a lengthened vowel and a slightly lower tone; the difference is comparable to how an American might say ‘car’ versus a Briton’s ‘cah’, a small shift that nevertheless signals regional identity.\n\nUnderstanding these dialectal patterns is essential for tracing how Yoruba has adapted to social pressures, because the distribution of phonological and lexical variants often mirrors migration routes, trade networks, and contact with neighboring ethnic groups; this insight prepares learners for the upcoming exploration of sociohistorical contexts of language change, where the same evidence will be used to explain why languages evolve over time.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language – Wikipedia"
+   },
+   {
+    "url": "https://www.britannica.com/topic/Yoruba-language",
+    "type": "article",
+    "title": "Yoruba dialects – Britannica"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=R9pQzLzD3M4",
+    "type": "video",
+    "title": "Yoruba dialects and variation (YouTube)"
+   }
+  ],
+  "words": 319,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 7504,
+    "tok": 3789,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3729,
+    "tok": 2307,
+    "ann": {
+     "issues": [],
+     "reason": "The summary discusses dialectal variation across Yoruba states, matching the assigned topic and level.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 77,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Reconstruction of Proto‑Yoruba Sound Changes",
+  "level": 2,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "A concrete illustration is the shift from Proto‑Yoruba */k/ to the modern Yoruba alveolar stop /t/ before front vowels, observable in the word for 'head': the proto form *kàkà becomes táá in contemporary Yoruba.",
+     "problem": "The Yoruba word for 'head' is not táá, and the reconstruction *kàkà is not attested; the example incorrectly depicts a *k > t change.",
+     "correction": "A concrete illustration could note that Proto‑Yoruba */k/ remained /k/ in many words, such as *kàkà becoming 'káká' (meaning 'to strike') in Yoruba, rather than a shift to /t/ for 'head', which is 'orí' in Yoruba."
+    }
+   ],
+   "reason": "The summary discusses reconstructing Proto‑Yoruba sound changes, stays at level 2, and references the prior and upcoming topics as required.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Reconstruction of Proto‑Yoruba sound changes is the systematic work of tracing how the phonemes of modern Yoruba evolved from their ancestral forms, using comparative data from dialects and related Niger‑Congo languages. By applying the comparative method, linguists piece together likely intermediate steps, identifying regular correspondences and ruling out accidental similarities. This builds directly on the sociohistorical context you studied, where migrations and contact with neighboring groups set the stage for the phonological shifts that we now reconstruct.\n\nKey terms include proto‑form, the hypothetical ancestor sound that gave rise to later variants; sound change, a regular, often irreversible alteration in a language's phonetic inventory; correspondence set, a group of sounds across dialects that share a common origin; lexical diffusion, the gradual spread of a sound change through the vocabulary; and comparative method, the systematic comparison of cognates to infer historical relationships. Each concept helps map the pathway from ancient pronunciations to the modern Yoruba phonemic system.\n\nA concrete illustration could note that Proto‑Yoruba */k/ remained /k/ in many words, such as *kàkà becoming 'káká' (meaning 'to strike') in Yoruba, rather than a shift to /t/ for 'head', which is 'orí' in Yoruba.\n\nUnderstanding these reconstructed sound changes matters because they reveal the internal logic of Yoruba's phonological development and prepare you for the next step: analyzing how the current sound system constrains syllable structure and morphological patterns. Recognizing the historical roots of phonotactic rules makes the upcoming study of Yoruba's phonotactics and morphological processes more intuitive, linking past changes to present linguistic behavior.",
+  "original": "Reconstruction of Proto‑Yoruba sound changes is the systematic work of tracing how the phonemes of modern Yoruba evolved from their ancestral forms, using comparative data from dialects and related Niger‑Congo languages. By applying the comparative method, linguists piece together likely intermediate steps, identifying regular correspondences and ruling out accidental similarities. This builds directly on the sociohistorical context you studied, where migrations and contact with neighboring groups set the stage for the phonological shifts that we now reconstruct.\n\nKey terms include *proto‑form*, the hypothetical ancestor sound that gave rise to later variants; *sound change*, a regular, often irreversible alteration in a language’s phonetic inventory; *correspondence set*, a group of sounds across dialects that share a common origin; *lexical diffusion*, the gradual spread of a sound change through the vocabulary; and *comparative method*, the systematic comparison of cognates to infer historical relationships. Each concept helps map the pathway from ancient pronunciations to the modern Yoruba phonemic system.\n\nA concrete illustration is the shift from *Proto‑Yoruba */k/ to the modern Yoruba alveolar stop /t/ before front vowels, observable in the word for ‘head’: the proto form *kàkà* becomes *táá* in contemporary Yoruba. This mirrors the well‑known Germanic shift from *p* to *f* in English ‘father’ versus German ‘Vater’, showing how a single articulatory environment can trigger a consistent change across many words.\n\nUnderstanding these reconstructed sound changes matters because they reveal the internal logic of Yoruba’s phonological development and prepare you for the next step: analyzing how the current sound system constrains syllable structure and morphological patterns. Recognizing the historical roots of phonotactic rules makes the upcoming study of Yoruba’s phonotactics and morphological processes more intuitive, linking past changes to present linguistic behavior.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language – Wikipedia"
+   },
+   {
+    "url": "https://www.britannica.com/topic/Yoruba-language/Phonology",
+    "type": "article",
+    "title": "Yoruba language – Phonology – Britannica"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=VhK3M6yLk2I",
+    "type": "video",
+    "title": "Proto‑Yoruba Sound Changes Explained (Video)"
+   }
+  ],
+  "words": 252,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4478,
+    "tok": 2280,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 2973,
+    "tok": 1791,
+    "ann": {
+     "issues": [
+      {
+       "quote": "A concrete illustration is the shift from Proto‑Yoruba */k/ to the modern Yoruba alveolar stop /t/ before front vowels, observable in the word for 'head': the proto form *kàkà becomes táá in contemporary Yoruba.",
+       "problem": "The Yoruba word for 'head' is not táá, and the reconstruction *kàkà is not attested; the example incorrectly depicts a *k > t change.",
+       "correction": "A concrete illustration could note that Proto‑Yoruba */k/ remained /k/ in many words, such as *kàkà becoming 'káká' (meaning 'to strike') in Yoruba, rather than a shift to /t/ for 'head', which is 'orí' in Yoruba."
+      }
+     ],
+     "reason": "The summary discusses reconstructing Proto‑Yoruba sound changes, stays at level 2, and references the prior and upcoming topics as required.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3530,
+    "tok": 2106,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 78,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Phonotactics and Morphological Processes",
+  "level": 2,
+  "status": "PASSED",
+  "verdict": {
+   "issues": [],
+   "reason": "The summary focuses on phonotactic constraints and morphological processes in Yoruba, explicitly building on the previous topic of sound reconstruction and setting up the next topic on language contact without re-teaching it, which aligns perfectly with the Level 2 brief.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Phonotactics and morphological processes are the rules that shape how sounds can be combined and how word parts are assembled in a language. In the study of the origin of Yoruba, they reveal the internal logic that turned the proto‑Yoruba inventory into the modern lexical patterns we see today. After reconstructing the sound changes in the previous unit, we now look at the constraints that govern permissible syllable shapes and the mechanisms that build new forms from smaller morphemes.\n\nKey concepts include phonotactic constraints – the language‑specific limits on consonant clusters and vowel sequences; onset and coda – the permissible consonants at the start or end of a syllable; syllable structure – typically (C)V(C) in Yoruba; morpheme – the smallest meaning‑bearing unit; affixation – adding prefixes or suffixes such as the plural -ní; reduplication – repeating a segment to indicate intensity or plurality; compounding – joining two stems like ọ̀rọ̀ + ìtàn to make \"story‑history\"; and tone sandhi – the automatic adjustment of tone patterns across morpheme boundaries.\n\nFor instance, the root /bá/ 'to meet' appears in the simple verb bá, but when combined with the causative suffix -sí it becomes bá‑sí 'to cause to meet'. Yoruba's phonotactics forbid a word‑final consonant cluster, so the underlying form /básí/ is realized as [báʃí] with an epenthetic vowel and a palatalized /ʃ/ that obeys the language's C V (C) pattern. Likewise, the noun ọ̀mọ̀ 'child' becomes ọ̀mọ̀kùnrin 'boy' by compounding, where the coda /m/ of the first stem merges smoothly with the onset /k/ of the second, illustrating both phonotactic harmony and morphological building.\n\nUnderstanding these patterns matters because they explain why certain reconstructed proto‑forms evolve into the modern Yoruba words we study, and they set the stage for how external influences will be integrated. The phonotactic and morphological toolkit determines which borrowed sounds or morphemes can be adopted without violating internal rules, so when we move on to language contact with Bantu and Atlantic languages, we will see which features are readily incorporated and which are resisted, based on the constraints outlined here.",
+  "original": "Phonotactics and morphological processes are the rules that shape how sounds can be combined and how word parts are assembled in a language. In the study of the origin of Yoruba, they reveal the internal logic that turned the proto‑Yoruba inventory into the modern lexical patterns we see today. After reconstructing the sound changes in the previous unit, we now look at the constraints that govern permissible syllable shapes and the mechanisms that build new forms from smaller morphemes.\n\nKey concepts include phonotactic constraints – the language‑specific limits on consonant clusters and vowel sequences; onset and coda – the permissible consonants at the start or end of a syllable; syllable structure – typically (C)V(C) in Yoruba; morpheme – the smallest meaning‑bearing unit; affixation – adding prefixes or suffixes such as the plural -ní; reduplication – repeating a segment to indicate intensity or plurality; compounding – joining two stems like ọ̀rọ̀ + ìtàn to make “story‑history”; and tone sandhi – the automatic adjustment of tone patterns across morpheme boundaries.\n\nFor instance, the root /bá/ ‘to meet’ appears in the simple verb bá, but when combined with the causative suffix -sí it becomes bá‑sí ‘to cause to meet’. Yoruba’s phonotactics forbid a word‑final consonant cluster, so the underlying form /básí/ is realized as [báʃí] with an epenthetic vowel and a palatalized /ʃ/ that obeys the language’s C V (C) pattern. Likewise, the noun ọ̀mọ̀ ‘child’ becomes ọ̀mọ̀kùnrin ‘boy’ by compounding, where the coda /m/ of the first stem merges smoothly with the onset /k/ of the second, illustrating both phonotactic harmony and morphological building.\n\nUnderstanding these patterns matters because they explain why certain reconstructed proto‑forms evolve into the modern Yoruba words we study, and they set the stage for how external influences will be integrated. The phonotactic and morphological toolkit determines which borrowed sounds or morphemes can be adopted without violating internal rules, so when we move on to language contact with Bantu and Atlantic languages, we will see which features are readily incorporated and which are resisted, based on the constraints outlined here.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Phonotactics",
+    "type": "wikipedia",
+    "title": "Phonotactics (Wikipedia)"
+   },
+   {
+    "url": "https://www.sil.org/resources/archives/5375",
+    "type": "article",
+    "title": "Yoruba language – phonology and morphology (SIL International article)"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=Rk7kI9Kx3Xg",
+    "type": "video",
+    "title": "Yoruba Language: Phonology and Morphology (YouTube video)"
+   }
+  ],
+  "words": 342,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 6198,
+    "tok": 2743,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": false,
+    "o": "http_error",
+    "ms": 9252,
+    "tok": null,
+    "ann": null,
+    "err": "[WinError 10054] An existing connection was forcibly closed by the remote host"
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "qwen/qwen3.8-27b",
+    "served": true,
+    "o": "success",
+    "ms": 3243,
+    "tok": 994,
+    "ann": {
+     "issues": [],
+     "reason": "The summary focuses on phonotactic constraints and morphological processes in Yoruba, explicitly building on the previous topic of sound reconstruction and setting up the next topic on language contact without re-teaching it, which aligns perfectly with the Level 2 brief.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 79,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Language Contact with Bantu and Atlantic Languages",
+  "level": 2,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "Language contact with Bantu and Atlantic languages describes the historical interactions between early Yoruba speakers and neighboring Bantu‑speaking migrants and Atlantic coastal peoples, which introduced new lexical items and subtle grammatical patterns.",
+     "problem": "There is no credible historical evidence that early Yoruba speakers had neighboring Bantu‑speaking migrants; Bantu groups were not geographically adjacent to Yoruba communities.",
+     "correction": "Language contact with Atlantic languages (and possibly other West African groups) describes the historical interactions between early Yoruba speakers and neighboring coastal peoples, which introduced new lexical items and subtle grammatical patterns."
+    },
+    {
+     "quote": "For instance, the Yoruba word sòkò 'market' traces back to the Bantu term soko, showing how a simple trade noun traveled across cultures much like a spice that flavors a stew, blending into the local tongue while retaining its original aroma.",
+     "problem": "The etymology is incorrect; the Yoruba word sòkò 'market' is not derived from a Bantu term but originates within Yoruba itself.",
+     "correction": "The Yoruba word sòkò 'market' derives from indigenous Yoruba roots, not from a Bantu term."
+    }
+   ],
+   "reason": "The summary discusses language contact between Yoruba and Bantu/Atlantic languages, which matches the assigned topic and level.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Language contact with Atlantic languages (and possibly other West African groups) describes the historical interactions between early Yoruba speakers and neighboring coastal peoples, which introduced new lexical items and subtle grammatical patterns. These contacts occurred through trade routes across the Niger‑Congo belt, migrations during the early medieval period, and coastal exchange networks, leaving a detectable imprint on modern Yoruba. Archaeological findings such as pottery styles and iron‑working sites line up with linguistic clues, supporting the timeline of these exchanges.\n\nLoanword – a word taken directly from another language and incorporated into Yoruba with minimal alteration. Substrate influence – structural features that persist in Yoruba because of an earlier language spoken by the community, often seen in phonology and verb morphology. Areal feature – a linguistic trait that spreads across neighboring languages irrespective of genetic relationship, such as tonal patterns shared with Atlantic languages. Code‑switching – the fluid alternation between Yoruba and a Bantu or Atlantic language in multilingual settings, which can become a source of borrowing. Lexical diffusion – the gradual spread of borrowed items through different dialects of Yoruba over time. Semantic shift – the change in meaning that a borrowed word undergoes as it adapts to Yoruba cultural contexts.\n\nFor instance, the Yoruba word sòkò 'market' derives from indigenous Yoruba roots, showing how a simple trade noun, like a spice that flavors a stew, blends into the local tongue while retaining its original aroma.\n\nUnderstanding these contact phenomena explains why Yoruba contains unexpected consonant clusters and tonal sequences that echo Bantu and Atlantic patterns, linking directly back to the phonotactic and morphological foundations covered in level 1. This awareness also prepares learners for the next stage—dialect contact and standardization—by illustrating how external influences become internalized and later regulated across speech communities. Learners can apply this insight by tracing borrowed roots in contemporary Yoruba texts, a skill that will be crucial when assessing dialectal variation and the push toward a standardized orthography.",
+  "original": "Language contact with Bantu and Atlantic languages describes the historical interactions between early Yoruba speakers and neighboring Bantu‑speaking migrants and Atlantic coastal peoples, which introduced new lexical items and subtle grammatical patterns. These contacts occurred through trade routes across the Niger‑Congo belt, migrations during the early medieval period, and coastal exchange networks, leaving a detectable imprint on modern Yoruba. Archaeological findings such as pottery styles and iron‑working sites line up with linguistic clues, supporting the timeline of these exchanges.\n\nLoanword – a word taken directly from another language and incorporated into Yoruba with minimal alteration. Substrate influence – structural features that persist in Yoruba because of an earlier language spoken by the community, often seen in phonology and verb morphology. Areal feature – a linguistic trait that spreads across neighboring languages irrespective of genetic relationship, such as tonal patterns shared with Atlantic languages. Code‑switching – the fluid alternation between Yoruba and a Bantu or Atlantic language in multilingual settings, which can become a source of borrowing. Lexical diffusion – the gradual spread of borrowed items through different dialects of Yoruba over time. Semantic shift – the change in meaning that a borrowed word undergoes as it adapts to Yoruba cultural contexts.\n\nFor instance, the Yoruba word *sòkò* ‘market’ traces back to the Bantu term *soko*, showing how a simple trade noun traveled across cultures much like a spice that flavors a stew, blending into the local tongue while retaining its original aroma.\n\nUnderstanding these contact phenomena explains why Yoruba contains unexpected consonant clusters and tonal sequences that echo Bantu and Atlantic patterns, linking directly back to the phonotactic and morphological foundations covered in level 1. This awareness also prepares learners for the next stage—dialect contact and standardization—by illustrating how external influences become internalized and later regulated across speech communities. Learners can apply this insight by tracing borrowed roots in contemporary Yoruba texts, a skill that will be crucial when assessing dialectal variation and the push toward a standardized orthography.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language"
+   },
+   {
+    "url": "https://www.britannica.com/topic/language-contact",
+    "type": "article",
+    "title": "Language contact"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=5v3J9uC5YbQ",
+    "type": "video",
+    "title": "Yoruba Language: History and Influences (Video)"
+   }
+  ],
+  "words": 323,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 6519,
+    "tok": 2662,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3603,
+    "tok": 2140,
+    "ann": {
+     "issues": [
+      {
+       "quote": "Language contact with Bantu and Atlantic languages describes the historical interactions between early Yoruba speakers and neighboring Bantu‑speaking migrants and Atlantic coastal peoples, which introduced new lexical items and subtle grammatical patterns.",
+       "problem": "There is no credible historical evidence that early Yoruba speakers had neighboring Bantu‑speaking migrants; Bantu groups were not geographically adjacent to Yoruba communities.",
+       "correction": "Language contact with Atlantic languages (and possibly other West African groups) describes the historical interactions between early Yoruba speakers and neighboring coastal peoples, which introduced new lexical items and subtle grammatical patterns."
+      },
+      {
+       "quote": "For instance, the Yoruba word sòkò 'market' traces back to the Bantu term soko, showing how a simple trade noun traveled across cultures much like a spice that flavors a stew, blending into the local tongue while retaining its original aroma.",
+       "problem": "The etymology is incorrect; the Yoruba word sòkò 'market' is not derived from a Bantu term but originates within Yoruba itself.",
+       "correction": "The Yoruba word sòkò 'market' derives from indigenous Yoruba roots, not from a Bantu term."
+      }
+     ],
+     "reason": "The summary discusses language contact between Yoruba and Bantu/Atlantic languages, which matches the assigned topic and level.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4951,
+    "tok": 2721,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 81,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Computational Phonology of Yoruba",
+  "level": 3,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "Computational phonology of Yoruba is the study of how Yoruba's sound system—especially its tonal patterns and vowel harmony—can be formalized, modeled, and processed by computers.",
+     "problem": "Yoruba does not exhibit vowel harmony, so mentioning vowel harmony as a feature of its sound system is factually incorrect.",
+     "correction": "Computational phonology of Yoruba is the study of how Yoruba's sound system—especially its tonal patterns—can be formalized, modeled, and processed by computers."
+    }
+   ],
+   "reason": "The summary discusses computational modeling of Yoruba phonology, which matches the requested topic and level.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Computational phonology of Yoruba is the study of how Yoruba's sound system—especially its tonal patterns—can be formalized, modeled, and processed by computers. It builds on the descriptive phonology covered earlier, turning rules about tone spreading, downdrift, and nasalization into algorithms that can be used for speech synthesis, automatic transcription, and linguistic data mining.\n\nTone tier – a separate representation that tracks high, mid, and low tones independently of the segmental string; Autosegmental mapping – the process of linking tone nodes to vowel or syllable anchors according to phonological constraints; Feature geometry – a hierarchical encoding of distinctive features such as [+voice] or [+nasal] that the parser manipulates; Finite-state transducer (FST) – a computational device that implements phonological rewrite rules as state transitions; Morphophonemic interface – the point where morphological affixation triggers tone sandhi or vowel coalescence, requiring the system to recompute tonal targets on the fly.\n\nImagine a Yoruba word like 'ọ̀rọ̀' (speech) where the low tone on the first syllable spreads to the second in fast speech, yielding a surface pattern that a speech recognizer must predict; a computational model treats the underlying /ò rɔ́/ as a sequence of tone nodes, applies a spread rule encoded in an FST, and outputs the realized /ò rɔ̄/ string, much like a spreadsheet automatically filling down a column based on a formula.\n\nUnderstanding computational phonology equips us to bridge the abstract analyses from the previous module on dialect contact with concrete tools for processing real Yoruba data, and it lays the groundwork for the upcoming exploration of sociolinguistic variation in urban Yoruba, where rapid code‑switching and emergent tonal patterns demand robust algorithmic handling. By mastering these models, scholars can quantify how standardization interacts with everyday speech and can design technologies—such as text‑to‑speech engines—that respect both normative and innovative uses of Yoruba phonology.",
+  "original": "Computational phonology of Yoruba is the study of how Yoruba's sound system—especially its tonal patterns and vowel harmony—can be formalized, modeled, and processed by computers. It builds on the descriptive phonology covered earlier, turning rules about tone spreading, downdrift, and nasalization into algorithms that can be used for speech synthesis, automatic transcription, and linguistic data mining.\n\nTone tier – a separate representation that tracks high, mid, and low tones independently of the segmental string; Autosegmental mapping – the process of linking tone nodes to vowel or syllable anchors according to phonological constraints; Feature geometry – a hierarchical encoding of distinctive features such as [+voice] or [+nasal] that the parser manipulates; Finite-state transducer (FST) – a computational device that implements phonological rewrite rules as state transitions; Morphophonemic interface – the point where morphological affixation triggers tone sandhi or vowel coalescence, requiring the system to recompute tonal targets on the fly.\n\nImagine a Yoruba word like ‘ọ̀rọ̀’ (speech) where the low tone on the first syllable spreads to the second in fast speech, yielding a surface pattern that a speech recognizer must predict; a computational model treats the underlying /ò rɔ́/ as a sequence of tone nodes, applies a spread rule encoded in an FST, and outputs the realized /ò rɔ̄/ string, much like a spreadsheet automatically filling down a column based on a formula.\n\nUnderstanding computational phonology equips us to bridge the abstract analyses from the previous module on dialect contact with concrete tools for processing real Yoruba data, and it lays the groundwork for the upcoming exploration of sociolinguistic variation in urban Yoruba, where rapid code‑switching and emergent tonal patterns demand robust algorithmic handling. By mastering these models, scholars can quantify how standardization interacts with everyday speech and can design technologies—such as text‑to‑speech engines—that respect both normative and innovative uses of Yoruba phonology.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_phonology",
+    "type": "wikipedia",
+    "title": "Yoruba phonology"
+   },
+   {
+    "url": "https://aclanthology.org/2020.lrec-1.123",
+    "type": "article",
+    "title": "Computational Modeling of Yoruba Tone Sandhi (ACL Anthology)"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=H6Yx9K9o2VQ",
+    "type": "video",
+    "title": "Yoruba Tone and Phonology – Lecture (YouTube)"
+   }
+  ],
+  "words": 300,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 7741,
+    "tok": 3752,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4255,
+    "tok": 2309,
+    "ann": {
+     "issues": [
+      {
+       "quote": "Computational phonology of Yoruba is the study of how Yoruba's sound system—especially its tonal patterns and vowel harmony—can be formalized, modeled, and processed by computers.",
+       "problem": "Yoruba does not exhibit vowel harmony, so mentioning vowel harmony as a feature of its sound system is factually incorrect.",
+       "correction": "Computational phonology of Yoruba is the study of how Yoruba's sound system—especially its tonal patterns—can be formalized, modeled, and processed by computers."
+      }
+     ],
+     "reason": "The summary discusses computational modeling of Yoruba phonology, which matches the requested topic and level.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4427,
+    "tok": 2495,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 83,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Historical Linguistic Methodology for Yoruba",
+  "level": 3,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "For instance, the modern Yoruba verb \"bá\" (to meet) shows an unexpected vowel length compared to its Igbo counterpart \"bá\".",
+     "problem": "The sentence incorrectly claims that Yoruba \"bá\" has an unexpected vowel length; in fact, Yoruba \"bá\" has a short vowel, matching the Igbo form.",
+     "correction": "For instance, the modern Yoruba verb \"bá\" (to meet) has a short vowel, similar to its Igbo counterpart \"bá\"."
+    }
+   ],
+   "reason": "The summary correctly describes historical linguistic methods for Yoruba at the appropriate advanced level without covering other topics.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Historical linguistic methodology for Yoruba is the set of systematic techniques scholars use to trace how Yoruba and its earlier stages have changed over time, drawing on comparative data from related Niger‑Congo languages and from internal variation within Yoruba itself. After mastering sociolinguistic variation in urban Yoruba, learners now shift from describing present‑day patterns to reconstructing the language's past forms and the processes that produced them.\n\nComparative method – the backbone of reconstruction, it aligns cognate sets from Yoruba, Igbo, and other Volta‑Niger languages to infer regular sound changes. Internal reconstruction – extracts earlier stages from irregularities in modern Yoruba morphology, such as fossilized prefixes. Sound correspondences – the predictable relationships (e.g., Proto‑Yoruba *b ↔ Yoruba b, *d ↔ d) that guide the placement of proto‑phonemes. Lexical cognates – words that share a common ancestor, used to build the proto‑lexicon. Etymological dictionary – a compiled record of reconstructed forms and their attested reflexes. Dialect geography – mapping how different Yoruba dialects preserve or innovate certain features, which supplies independent evidence for reconstruction. Glottochronology – a statistical estimate of divergence times that, when combined with archaeological data, helps date key splits within the Yorùbá branch.\n\nFor instance, the modern Yoruba verb \"bá\" (to meet) has a short vowel, similar to its Igbo counterpart \"bá\". By noting that several other verbs with a long vowel in Yoruba correspond to short vowels in Igbo, linguists infer a historical lengthening rule that operated after the languages diverged, allowing them to reconstruct a Proto‑Yoruba form *ba without length.\n\nUnderstanding these methods matters because it provides the empirical foundation for the upcoming debate on how Yoruba should be classified within the Volta‑Niger family; only by having a reliable proto‑form can scholars argue for subgroupings or contact influences. It also illuminates how lexical borrowing and internal innovation have shaped the language we see today, linking the historical perspective to the sociolinguistic patterns discussed earlier and setting the stage for the current classification controversies.",
+  "original": "Historical linguistic methodology for Yoruba is the set of systematic techniques scholars use to trace how Yoruba and its earlier stages have changed over time, drawing on comparative data from related Niger‑Congo languages and from internal variation within Yoruba itself. After mastering sociolinguistic variation in urban Yoruba, learners now shift from describing present‑day patterns to reconstructing the language’s past forms and the processes that produced them.\n\nComparative method – the backbone of reconstruction, it aligns cognate sets from Yoruba, Igbo, and other Volta‑Niger languages to infer regular sound changes. Internal reconstruction – extracts earlier stages from irregularities in modern Yoruba morphology, such as fossilized prefixes. Sound correspondences – the predictable relationships (e.g., Proto‑Yoruba *b ↔ Yoruba b, *d ↔ d) that guide the placement of proto‑phonemes. Lexical cognates – words that share a common ancestor, used to build the proto‑lexicon. Etymological dictionary – a compiled record of reconstructed forms and their attested reflexes. Dialect geography – mapping how different Yoruba dialects preserve or innovate certain features, which supplies independent evidence for reconstruction. Glottochronology – a statistical estimate of divergence times that, when combined with archaeological data, helps date key splits within the Yorùbá branch.\n\nFor instance, the modern Yoruba verb “bá” (to meet) shows an unexpected vowel length compared to its Igbo counterpart “bá”. By noting that several other verbs with a long vowel in Yoruba correspond to short vowels in Igbo, linguists infer a historical lengthening rule that operated after the languages diverged, allowing them to reconstruct a Proto‑Yoruba form *ba without length.\n\nUnderstanding these methods matters because it provides the empirical foundation for the upcoming debate on how Yoruba should be classified within the Volta‑Niger family; only by having a reliable proto‑form can scholars argue for subgroupings or contact influences. It also illuminates how lexical borrowing and internal innovation have shaped the language we see today, linking the historical perspective to the sociolinguistic patterns discussed earlier and setting the stage for the current classification controversies.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Historical_linguistics",
+    "type": "wikipedia",
+    "title": "Historical linguistics"
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language"
+   },
+   {
+    "url": "https://glottolog.org/resource/languoid/id/yoru1245",
+    "type": "article",
+    "title": "Proto‑Yoruba reconstruction"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=3U4nY2xKkXc",
+    "type": "video",
+    "title": "Historical Linguistics: The Comparative Method (University of Edinburgh)"
+   }
+  ],
+  "words": 326,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 7041,
+    "tok": 2954,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4147,
+    "tok": 1782,
+    "ann": {
+     "issues": [
+      {
+       "quote": "For instance, the modern Yoruba verb \"bá\" (to meet) shows an unexpected vowel length compared to its Igbo counterpart \"bá\".",
+       "problem": "The sentence incorrectly claims that Yoruba \"bá\" has an unexpected vowel length; in fact, Yoruba \"bá\" has a short vowel, matching the Igbo form.",
+       "correction": "For instance, the modern Yoruba verb \"bá\" (to meet) has a short vowel, similar to its Igbo counterpart \"bá\"."
+      }
+     ],
+     "reason": "The summary correctly describes historical linguistic methods for Yoruba at the appropriate advanced level without covering other topics.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4066,
+    "tok": 2269,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 84,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Current Debates on Yoruba Classification",
+  "level": 3,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "the loss of the proto‑Niger‑Congo labial‑velar series, which some researchers treat as a diagnostic marker for a Kwa subgroup",
+     "problem": "No researchers use the loss of the proto‑Niger‑Congo labial‑velar series as a diagnostic marker for a Kwa subgroup; the presence of labial‑velar series, not its loss, is relevant to such classifications.",
+     "correction": "the loss of the proto‑Niger‑Congo labial‑velar series, which some researchers note, but it is not used as a diagnostic marker for a Kwa subgroup"
+    },
+    {
+     "quote": "Yoruba has retained a set of vowel‑length contrasts and tonal patterns that are rare elsewhere",
+     "problem": "Vowel‑length contrasts and tonal patterns are common in many Niger‑Congo languages, so describing them as rare elsewhere is inaccurate.",
+     "correction": "Yoruba has retained vowel‑length contrasts and tonal patterns that are common among many Niger‑Congo languages"
+    }
+   ],
+   "reason": "The summary discusses current debates about how Yoruba is classified within Niger‑Congo, which matches the specified topic and level.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Current debates on Yoruba classification focus on how the language fits into the broader Niger‑Congo family, especially whether it should be placed in the Kwa branch, the Volta‑Niger subgroup, or treated as a distinct primary branch. Scholars build on the historical‑linguistic methodology covered in the previous level, but they now wrestle with new lexical and phonological evidence, computational phylogenies, and sociolinguistic data that sometimes point in opposite directions.\n\nKwa branch – a provisional grouping of languages spoken in southeastern Nigeria and neighboring Ghana that share a set of vowel harmony patterns; Volta‑Niger hypothesis – the proposal that Yoruba, Igbo, and several other languages form a tighter genetic cluster within Niger‑Congo; genealogical classification – sorting languages by descent from a common ancestor, contrasted with areal classification, which emphasizes borrowing across geographic proximity; lexical diffusion – the gradual spread of specific cognates or innovations that can blur subgroup boundaries; phonological innovations such as the loss of the proto‑Niger‑Congo labial‑velar series, which some researchers note, but it is not used as a diagnostic marker for a Kwa subgroup; mutual intelligibility – the practical measure of how well speakers of neighboring varieties understand each other, often used to argue for separate branches; diaspora varieties – the newly emerging forms of Yoruba spoken in the Americas and Europe, whose mixed vocabularies raise questions about the stability of traditional classifications.\n\nImagine the relationship between Spanish and Portuguese: they share a core grammar and many cognates, yet centuries of divergent sound changes make them distinct languages; similarly, Yoruba and its closest Niger‑Congo neighbours share a substantial lexical core, but recent comparative work shows that Yoruba has retained vowel‑length contrasts and tonal patterns that are common among many Niger‑Congo languages, a pattern that some scholars liken to a 'linguistic fingerprint' distinguishing it from its supposed Kwa siblings.\n\nThis debate matters because the way we classify Yoruba determines which languages are chosen as comparison points for reconstructing proto‑forms, influencing everything from textbook grammar to computational models of language change; a classification that groups Yoruba with Kwa languages highlights shared innovations that can be leveraged in comparative reconstruction, while a separate branch forces researchers to treat many features as independent developments. Understanding the current consensus and its fractures also sets the stage for the next module on revitalization and digital preservation, where decisions about orthography standards, corpus building, and language technology depend on a clear picture of Yoruba's genetic relationships.",
+  "original": "Current debates on Yoruba classification focus on how the language fits into the broader Niger‑Congo family, especially whether it should be placed in the Kwa branch, the Volta‑Niger subgroup, or treated as a distinct primary branch. Scholars build on the historical‑linguistic methodology covered in the previous level, but they now wrestle with new lexical and phonological evidence, computational phylogenies, and sociolinguistic data that sometimes point in opposite directions.\n\nKwa branch – a provisional grouping of languages spoken in southeastern Nigeria and neighboring Ghana that share a set of vowel harmony patterns; Volta‑Niger hypothesis – the proposal that Yoruba, Igbo, and several other languages form a tighter genetic cluster within Niger‑Congo; genealogical classification – sorting languages by descent from a common ancestor, contrasted with areal classification, which emphasizes borrowing across geographic proximity; lexical diffusion – the gradual spread of specific cognates or innovations that can blur subgroup boundaries; phonological innovations such as the loss of the proto‑Niger‑Congo labial‑velar series, which some researchers treat as a diagnostic marker for a Kwa subgroup; mutual intelligibility – the practical measure of how well speakers of neighboring varieties understand each other, often used to argue for separate branches; diaspora varieties – the newly emerging forms of Yoruba spoken in the Americas and Europe, whose mixed vocabularies raise questions about the stability of traditional classifications.\n\nImagine the relationship between Spanish and Portuguese: they share a core grammar and many cognates, yet centuries of divergent sound changes make them distinct languages; similarly, Yoruba and its closest Niger‑Congo neighbours share a substantial lexical core, but recent comparative work shows that Yoruba has retained a set of vowel‑length contrasts and tonal patterns that are rare elsewhere, a pattern that some scholars liken to a ‘linguistic fingerprint’ distinguishing it from its supposed Kwa siblings.\n\nThis debate matters because the way we classify Yoruba determines which languages are chosen as comparison points for reconstructing proto‑forms, influencing everything from textbook grammar to computational models of language change; a classification that groups Yoruba with Kwa languages highlights shared innovations that can be leveraged in comparative reconstruction, while a separate branch forces researchers to treat many features as independent developments. Understanding the current consensus and its fractures also sets the stage for the next module on revitalization and digital preservation, where decisions about orthography standards, corpus building, and language technology depend on a clear picture of Yoruba’s genetic relationships.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language - Wikipedia"
+   },
+   {
+    "url": "https://www.researchgate.net/publication/342567890_The_Kwa_Question_in_Yoruba_Classification",
+    "type": "article",
+    "title": "The Kwa Question in Yoruba Classification (ResearchGate article)"
+   }
+  ],
+  "words": 400,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 10204,
+    "tok": 3016,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4451,
+    "tok": 2388,
+    "ann": {
+     "issues": [
+      {
+       "quote": "the loss of the proto‑Niger‑Congo labial‑velar series, which some researchers treat as a diagnostic marker for a Kwa subgroup",
+       "problem": "No researchers use the loss of the proto‑Niger‑Congo labial‑velar series as a diagnostic marker for a Kwa subgroup; the presence of labial‑velar series, not its loss, is relevant to such classifications.",
+       "correction": "the loss of the proto‑Niger‑Congo labial‑velar series, which some researchers note, but it is not used as a diagnostic marker for a Kwa subgroup"
+      },
+      {
+       "quote": "Yoruba has retained a set of vowel‑length contrasts and tonal patterns that are rare elsewhere",
+       "problem": "Vowel‑length contrasts and tonal patterns are common in many Niger‑Congo languages, so describing them as rare elsewhere is inaccurate.",
+       "correction": "Yoruba has retained vowel‑length contrasts and tonal patterns that are common among many Niger‑Congo languages"
+      }
+     ],
+     "reason": "The summary discusses current debates about how Yoruba is classified within Niger‑Congo, which matches the specified topic and level.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4487,
+    "tok": 2737,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 85,
+  "subject": "Origin of the Yoruba Language",
+  "title": "Revitalization and Digital Preservation of Yoruba",
+  "level": 3,
+  "status": "PASSED",
+  "verdict": {
+   "issues": [],
+   "reason": "The summary discusses revitalization and digital preservation initiatives for Yoruba, directly addressing the assigned topic.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Revitalization and digital preservation of Yoruba refer to coordinated efforts that breathe new life into the language while safeguarding its records in electronic form. Scholars, community groups, and tech developers are building searchable corpora, mobile learning tools, and cloud‑based archives to keep spoken and written Yoruba vibrant for future generations. These initiatives often blend open‑source software with traditional pedagogy, creating platforms that can be updated as the language evolves and as new research emerges.\n\nKey concepts include language revitalization – the process of encouraging everyday use among speakers; digital corpus – a large, annotated collection of texts and audio stored online; orthography standardization – agreeing on a consistent spelling system for digital work; community‑driven documentation – locals recording stories, songs, and rituals; multimedia archives – video, audio, and image repositories; and language technology – tools such as speech‑recognition, OCR, and predictive keyboards that make Yoruba accessible on devices. Another important notion is sustainability, which involves training local technicians to maintain servers and ensuring that funding models support long‑term access.\n\nA concrete illustration is the Yoruba Digital Archive launched by the University of Ibadan, which hosts over 10,000 digitized manuscripts, oral histories, and folk songs, all searchable through a web portal. The project partners with native speakers who tag recordings with metadata, enabling a language‑learning app to pull authentic proverbs and pronunciation guides directly from the archive. Think of it as a virtual museum where each exhibit is a living piece of language that students can explore, listen to, and reuse in their own projects. The archive also links each recording to a geo‑tag, allowing researchers to map dialectal variation across Yoruba‑speaking regions, a feature that enriches both linguistic and cultural studies.\n\nUnderstanding how Yoruba is being revitalized and digitally preserved matters because it directly influences the availability of authentic data for tracing the language's origins and testing classification theories discussed earlier. Robust digital resources empower scholars to conduct phonological and lexical comparisons across time, while community involvement ensures that revitalization respects cultural nuance. This groundwork paves the way for the next module on emerging Yoruba language technologies and their role in education, media, and global communication. Finally, the digital turn democratizes access, giving diaspora communities the tools to reconnect with their heritage and contribute new material back to the scholarly ecosystem.",
+  "original": "Revitalization and digital preservation of Yoruba refer to coordinated efforts that breathe new life into the language while safeguarding its records in electronic form. Scholars, community groups, and tech developers are building searchable corpora, mobile learning tools, and cloud‑based archives to keep spoken and written Yoruba vibrant for future generations. These initiatives often blend open‑source software with traditional pedagogy, creating platforms that can be updated as the language evolves and as new research emerges.\n\nKey concepts include language revitalization – the process of encouraging everyday use among speakers; digital corpus – a large, annotated collection of texts and audio stored online; orthography standardization – agreeing on a consistent spelling system for digital work; community‑driven documentation – locals recording stories, songs, and rituals; multimedia archives – video, audio, and image repositories; and language technology – tools such as speech‑recognition, OCR, and predictive keyboards that make Yoruba accessible on devices. Another important notion is sustainability, which involves training local technicians to maintain servers and ensuring that funding models support long‑term access.\n\nA concrete illustration is the Yoruba Digital Archive launched by the University of Ibadan, which hosts over 10,000 digitized manuscripts, oral histories, and folk songs, all searchable through a web portal. The project partners with native speakers who tag recordings with metadata, enabling a language‑learning app to pull authentic proverbs and pronunciation guides directly from the archive. Think of it as a virtual museum where each exhibit is a living piece of language that students can explore, listen to, and reuse in their own projects. The archive also links each recording to a geo‑tag, allowing researchers to map dialectal variation across Yoruba‑speaking regions, a feature that enriches both linguistic and cultural studies.\n\nUnderstanding how Yoruba is being revitalized and digitally preserved matters because it directly influences the availability of authentic data for tracing the language’s origins and testing classification theories discussed earlier. Robust digital resources empower scholars to conduct phonological and lexical comparisons across time, while community involvement ensures that revitalization respects cultural nuance. This groundwork paves the way for the next module on emerging Yoruba language technologies and their role in education, media, and global communication. Finally, the digital turn democratizes access, giving diaspora communities the tools to reconnect with their heritage and contribute new material back to the scholarly ecosystem.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Yoruba_language",
+    "type": "wikipedia",
+    "title": "Yoruba language - Wikipedia"
+   },
+   {
+    "url": "https://www.ui.edu.ng/yoruba-digital-archive",
+    "type": "article",
+    "title": "Yoruba Digital Archive – University of Ibadan"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=U9F1tq0JQ3g",
+    "type": "video",
+    "title": "Yoruba Language Revitalization – African Language Technology Lab (Video)"
+   }
+  ],
+  "words": 381,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 8757,
+    "tok": 4101,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 2439,
+    "tok": 1672,
+    "ann": {
+     "issues": [],
+     "reason": "The summary discusses revitalization and digital preservation initiatives for Yoruba, directly addressing the assigned topic.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 102,
+  "subject": "Python Programming",
+  "title": "Advanced Itertools and Functional Tools",
+  "level": 3,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "By wrapping the accumulation in a functools.partial that fixes the start value, the whole pipeline stays a single generator expression that never loads the entire file into memory, yet you get the final total and can also emit intermediate checkpoints for monitoring.",
+     "problem": "functools.partial cannot be used to fix the start value of itertools.accumulate; accumulate's start value is supplied via its 'initial' parameter, not via partial application.",
+     "correction": "By using itertools.accumulate's 'initial' argument to set the start value (or by initializing the accumulator separately), the pipeline stays a single generator expression that never loads the entire file into memory, yet you get the final total and can also emit intermediate checkpoints for monitoring."
+    }
+   ],
+   "reason": "The summary stays focused on advanced itertools and functional tools appropriate for a level‑3 learner and does not re‑teach previous or next topics.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Advanced itertools and functional tools are the high‑performance building blocks that let you compose complex data pipelines with minimal code. They sit on top of the basic looping constructs you already know, turning iteration into a lazy, composable process that scales to large or infinite sequences without blowing memory.\n\nitertools.chain flattens several iterables into a single lazy sequence, so you can walk through many collections as if they were one. itertools.islice slices an iterator without materializing it, letting you grab any window of items on the fly. itertools.groupby groups consecutive elements that share a key function, which is perfect for run‑length encoding. itertools.combinations and itertools.product generate Cartesian products or k‑element subsets without storing the full result set. itertools.accumulate produces a running total or any binary reduction across an iterator. itertools.filterfalse yields items for which a predicate is false, the logical complement of filter. functools.reduce applies a binary function cumulatively to collapse an iterable to a single value. functools.partial pre‑binds arguments to a callable, creating a new function with fewer required inputs. The operator module supplies fast, C‑level functions like add, mul, and itemgetter that work smoothly with map, filter, and reduce. Together these utilities enable lazy evaluation, generator pipelines, and declarative data transformation.\n\nImagine you have a massive log file where each line records a timestamp and a numeric metric. Using itertools.islice you can read only the lines for a given hour, itertools.filterfalse to discard entries below a threshold, and itertools.accumulate together with operator.add to keep a running sum of the metric. By using itertools.accumulate's 'initial' argument to set the start value (or by initializing the accumulator separately), the pipeline stays a single generator expression that never loads the entire file into memory, yet you get the final total and can also emit intermediate checkpoints for monitoring.\n\nMastering these tools is essential before stepping into asynchronous programming because asyncio's async generators and async for loops rely on the same lazy iteration principles you've just refined. A solid grasp of itertools lets you build non‑blocking pipelines that stream data from sockets or databases without blocking the event loop. Moreover, functional patterns such as partial application and reduce translate directly into callback composition in asyncio, smoothing the transition to concurrent code. In short, advanced itertools and functional utilities give you the mental models and reusable code pieces that make the upcoming async chapter both natural and performant.",
+  "original": "Advanced itertools and functional tools are the high‑performance building blocks that let you compose complex data pipelines with minimal code. They sit on top of the basic looping constructs you already know, turning iteration into a lazy, composable process that scales to large or infinite sequences without blowing memory.\n\nitertools.chain flattens several iterables into a single lazy sequence, so you can walk through many collections as if they were one. itertools.islice slices an iterator without materializing it, letting you grab any window of items on the fly. itertools.groupby groups consecutive elements that share a key function, which is perfect for run‑length encoding. itertools.combinations and itertools.product generate Cartesian products or k‑element subsets without storing the full result set. itertools.accumulate produces a running total or any binary reduction across an iterator. itertools.filterfalse yields items for which a predicate is false, the logical complement of filter. functools.reduce applies a binary function cumulatively to collapse an iterable to a single value. functools.partial pre‑binds arguments to a callable, creating a new function with fewer required inputs. The operator module supplies fast, C‑level functions like add, mul, and itemgetter that work smoothly with map, filter, and reduce. Together these utilities enable lazy evaluation, generator pipelines, and declarative data transformation.\n\nImagine you have a massive log file where each line records a timestamp and a numeric metric. Using itertools.islice you can read only the lines for a given hour, itertools.filterfalse to discard entries below a threshold, and itertools.accumulate together with operator.add to keep a running sum of the metric. By wrapping the accumulation in a functools.partial that fixes the start value, the whole pipeline stays a single generator expression that never loads the entire file into memory, yet you get the final total and can also emit intermediate checkpoints for monitoring.\n\nMastering these tools is essential before stepping into asynchronous programming because asyncio’s async generators and async for loops rely on the same lazy iteration principles you’ve just refined. A solid grasp of itertools lets you build non‑blocking pipelines that stream data from sockets or databases without blocking the event loop. Moreover, functional patterns such as partial application and reduce translate directly into callback composition in asyncio, smoothing the transition to concurrent code. In short, advanced itertools and functional utilities give you the mental models and reusable code pieces that make the upcoming async chapter both natural and performant.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Itertools",
+    "type": "wikipedia",
+    "title": "Itertools – Python documentation"
+   },
+   {
+    "url": "https://realpython.com/python-itertools/",
+    "type": "article",
+    "title": "Itertools Recipes: Building Efficient Loops in Python"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=TA1f9T7f5lU",
+    "type": "video",
+    "title": "Python itertools Module - Advanced Iterators (Corey Schafer)"
+   },
+   {
+    "url": "https://realpython.com/functional-programming-python/",
+    "type": "article",
+    "title": "Functional Programming in Python: map, filter, reduce, and functools"
+   }
+  ],
+  "words": 395,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 6136,
+    "tok": 2674,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3257,
+    "tok": 1989,
+    "ann": {
+     "issues": [
+      {
+       "quote": "By wrapping the accumulation in a functools.partial that fixes the start value, the whole pipeline stays a single generator expression that never loads the entire file into memory, yet you get the final total and can also emit intermediate checkpoints for monitoring.",
+       "problem": "functools.partial cannot be used to fix the start value of itertools.accumulate; accumulate's start value is supplied via its 'initial' parameter, not via partial application.",
+       "correction": "By using itertools.accumulate's 'initial' argument to set the start value (or by initializing the accumulator separately), the pipeline stays a single generator expression that never loads the entire file into memory, yet you get the final total and can also emit intermediate checkpoints for monitoring."
+      }
+     ],
+     "reason": "The summary stays focused on advanced itertools and functional tools appropriate for a level‑3 learner and does not re‑teach previous or next topics.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 5062,
+    "tok": 2799,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ },
+ {
+  "id": 161,
+  "subject": "Kubernetes",
+  "title": "Autoscaling with HPA and VPA",
+  "level": 2,
+  "status": "FIXED",
+  "verdict": {
+   "issues": [
+    {
+     "quote": "Vertical Pod Autoscaler (VPA) observes the actual usage of a pod's containers and adjusts their CPU and memory requests and limits, reducing over‑provisioning.",
+     "problem": "VPA only automatically updates resource requests (and can optionally modify limits if explicitly configured), so stating it adjusts both requests and limits is inaccurate.",
+     "correction": "Vertical Pod Autoscaler (VPA) observes the actual usage of a pod's containers and adjusts their CPU and memory requests (and can optionally update limits if configured), reducing over‑provisioning."
+    },
+    {
+     "quote": "Scaling policies let you control the rate of change, such as cooldown periods or max surge, to avoid thrashing.",
+     "problem": "\"max surge\" is a Deployment rollout setting, not a scaling policy of the HPA/VPA; including it misrepresents HPA scaling policies.",
+     "correction": "Scaling policies let you control the rate of change, such as cooldown periods, to avoid thrashing."
+    }
+   ],
+   "reason": "The summary accurately covers HPA and VPA concepts, appropriate for a level‑2 learner, and stays within the requested scope.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "final": "Autoscaling with the Horizontal Pod Autoscaler (HPA) and Vertical Pod Autoscaler (VPA) lets a Kubernetes cluster automatically adjust the number of pod replicas or the resources allocated to each pod as demand changes. After completing the RBAC and Security Contexts basics, you now have the permissions and context needed to create these controllers safely, and you'll see how they keep workloads performant without manual intervention.\n\nHorizontal Pod Autoscaler (HPA) watches CPU, memory, or custom metrics and scales the replica count up or down to keep those metrics within a target range. Vertical Pod Autoscaler (VPA) observes the actual usage of a pod's containers and adjusts their CPU and memory requests (and can optionally update limits if configured), reducing over‑provisioning. Metrics Server is the lightweight add‑on that supplies resource usage data to both autoscalers. Scaling thresholds define the upper and lower bounds that trigger a scaling action. Scaling policies let you control the rate of change, such as cooldown periods, to avoid thrashing. Stability window is the period an autoscaler waits before acting again, ensuring short spikes don't cause unnecessary scaling.\n\nImagine a popular coffee shop that opens more counters when the line grows and reduces staff when the rush passes. HPA works like adding or removing whole counters – it changes the number of pod replicas based on traffic. VPA, on the other hand, is like giving each barista a larger or smaller workstation depending on how many drinks they need to prepare, tweaking the resources each pod gets without changing the number of pods.\n\nEffective autoscaling guarantees that applications remain responsive while keeping cloud costs in check, which is a core goal of any Kubernetes deployment. By continuously feeding metrics into HPA and VPA, you create a feedback loop that later monitoring tools such as Prometheus can visualize and alert on, making the transition to the Monitoring with Prometheus and Grafana module seamless. Understanding autoscaling also helps you set appropriate Service Level Objectives that can be measured and refined in the next phase.",
+  "original": "Autoscaling with the Horizontal Pod Autoscaler (HPA) and Vertical Pod Autoscaler (VPA) lets a Kubernetes cluster automatically adjust the number of pod replicas or the resources allocated to each pod as demand changes. After completing the RBAC and Security Contexts basics, you now have the permissions and context needed to create these controllers safely, and you’ll see how they keep workloads performant without manual intervention.\n\nHorizontal Pod Autoscaler (HPA) watches CPU, memory, or custom metrics and scales the replica count up or down to keep those metrics within a target range. Vertical Pod Autoscaler (VPA) observes the actual usage of a pod’s containers and adjusts their CPU and memory requests and limits, reducing over‑provisioning. Metrics Server is the lightweight add‑on that supplies resource usage data to both autoscalers. Scaling thresholds define the upper and lower bounds that trigger a scaling action. Scaling policies let you control the rate of change, such as cooldown periods or max surge, to avoid thrashing. Stability window is the period an autoscaler waits before acting again, ensuring short spikes don’t cause unnecessary scaling.\n\nImagine a popular coffee shop that opens more counters when the line grows and reduces staff when the rush passes. HPA works like adding or removing whole counters – it changes the number of pod replicas based on traffic. VPA, on the other hand, is like giving each barista a larger or smaller workstation depending on how many drinks they need to prepare, tweaking the resources each pod gets without changing the number of pods.\n\nEffective autoscaling guarantees that applications remain responsive while keeping cloud costs in check, which is a core goal of any Kubernetes deployment. By continuously feeding metrics into HPA and VPA, you create a feedback loop that later monitoring tools such as Prometheus can visualize and alert on, making the transition to the Monitoring with Prometheus and Grafana module seamless. Understanding autoscaling also helps you set appropriate Service Level Objectives that can be measured and refined in the next phase.",
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Horizontal_Pod_Autoscaler",
+    "type": "wikipedia",
+    "title": "Horizontal Pod Autoscaler - Wikipedia"
+   },
+   {
+    "url": "https://kubernetes.io/docs/tasks/run-application/vertical-pod-autoscaling/",
+    "type": "article",
+    "title": "Vertical Pod Autoscaler – Kubernetes Documentation"
+   },
+   {
+    "url": "https://www.digitalocean.com/community/tutorials/how-to-set-up-horizontal-pod-autoscaling-on-kubernetes",
+    "type": "article",
+    "title": "How to Set Up Horizontal Pod Autoscaling on Kubernetes – DigitalOcean"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=I8JrKqB5o6Y",
+    "type": "video",
+    "title": "Kubernetes Autoscaling Explained – YouTube"
+   }
+  ],
+  "words": 334,
+  "paras": 4,
+  "calls": [
+   {
+    "a": "topic",
+    "v": "topic-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 5263,
+    "tok": 2494,
+    "ann": null,
+    "err": ""
+   },
+   {
+    "a": "review",
+    "v": "review-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 3806,
+    "tok": 2205,
+    "ann": {
+     "issues": [
+      {
+       "quote": "Vertical Pod Autoscaler (VPA) observes the actual usage of a pod's containers and adjusts their CPU and memory requests and limits, reducing over‑provisioning.",
+       "problem": "VPA only automatically updates resource requests (and can optionally modify limits if explicitly configured), so stating it adjusts both requests and limits is inaccurate.",
+       "correction": "Vertical Pod Autoscaler (VPA) observes the actual usage of a pod's containers and adjusts their CPU and memory requests (and can optionally update limits if configured), reducing over‑provisioning."
+      },
+      {
+       "quote": "Scaling policies let you control the rate of change, such as cooldown periods or max surge, to avoid thrashing.",
+       "problem": "\"max surge\" is a Deployment rollout setting, not a scaling policy of the HPA/VPA; including it misrepresents HPA scaling policies.",
+       "correction": "Scaling policies let you control the rate of change, such as cooldown periods, to avoid thrashing."
+      }
+     ],
+     "reason": "The summary accurately covers HPA and VPA concepts, appropriate for a level‑2 learner, and stays within the requested scope.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "err": ""
+   },
+   {
+    "a": "topic_repair",
+    "v": "topic_repair-v1",
+    "m": "openai/gpt-oss-120b",
+    "served": true,
+    "o": "success",
+    "ms": 4957,
+    "tok": 2833,
+    "ann": {
+     "repair": "repaired"
+    },
+    "err": ""
+   }
+  ]
+ }
+]
