@@ -2,35 +2,30 @@ from datetime import timedelta
 
 import sentry_sdk
 from celery import shared_task
-from django.db import models
 from django.utils import timezone
 
 from apps.ai.exceptions import ProviderError
 
-
-def _mark_topic_failed(topic_id: int) -> None:
-    from .events import publish_topic_status
-    from .models import Topic
-
-    Topic.objects.filter(id=topic_id).update(
-        content_status=Topic.ContentStatus.FAILED,
-        review_status=Topic.ReviewStatus.FLAGGED,
-    )
-    publish_topic_status(topic_id)
-
-
-@shared_task(
+# Topic content runs as three stages, one task each. Tasks hold no decisions:
+# they call apps/learning/pipeline.py and, on their last retry, its give-up path.
+_STAGE_TASK = dict(
     bind=True,
-    name="learning.generate_content_for_topic",
     autoretry_for=(ProviderError,),
     retry_backoff=True,
     retry_backoff_max=300,
     retry_jitter=True,
     max_retries=3,
 )
+
+
+def _last_retry(task) -> bool:
+    return task.request.retries >= task.max_retries
+
+
+@shared_task(name="learning.generate_content_for_topic", **_STAGE_TASK)
 def generate_content_for_topic(self, topic_id: int) -> None:
     from .exceptions import GenerationError
-    from .services import generate_topic_content
+    from .pipeline import generate_topic_content, mark_generation_failed
 
     # The caller already claimed the topic (request_topic_generation).
     try:
@@ -40,60 +35,38 @@ def generate_content_for_topic(self, topic_id: int) -> None:
             f"Topic {topic_id}: content validation failed after retries",
             level="error",
         )
-        _mark_topic_failed(topic_id)
-        return
+        mark_generation_failed(topic_id)
     except ProviderError:
-        # Re-raised so autoretry_for can retry; only on the last attempt do we
-        # also surface FAILED, because no further retry will update the state.
-        if self.request.retries >= self.max_retries:
-            _mark_topic_failed(topic_id)
+        # Re-raised so autoretry_for can retry; only the last attempt surfaces FAILED.
+        if _last_retry(self):
+            mark_generation_failed(topic_id)
         raise
 
-    review_content_for_topic.delay(topic_id)
 
-
-@shared_task(
-    bind=True,
-    name="learning.review_content_for_topic",
-    autoretry_for=(ProviderError,),
-    retry_backoff=True,
-    retry_backoff_max=300,
-    retry_jitter=True,
-    max_retries=3,
-)
+@shared_task(name="learning.review_content_for_topic", **_STAGE_TASK)
 def review_content_for_topic(self, topic_id: int) -> None:
-    from .events import publish_topic_status
-    from .models import Topic
-    from .services import request_topic_generation, review_topic_content
+    from .pipeline import give_up_review, review_topic_content
 
-    topic = Topic.objects.get(id=topic_id)
-    passed = review_topic_content(topic_id)
+    try:
+        review_topic_content(topic_id)
+    except ProviderError:
+        # An outage is not a verdict (D6): on the last retry, publish UNREVIEWED.
+        if _last_retry(self):
+            give_up_review(topic_id)
+        raise
 
-    if passed:
-        Topic.objects.filter(id=topic_id).update(
-            content_status=Topic.ContentStatus.READY,
-            review_status=Topic.ReviewStatus.PASSED,
-        )
-        publish_topic_status(topic_id)
-        return
 
-    Topic.objects.filter(id=topic_id).update(
-        review_attempts=models.F("review_attempts") + 1,
-    )
-    topic.refresh_from_db()
+@shared_task(name="learning.repair_content_for_topic", **_STAGE_TASK)
+def repair_content_for_topic(self, topic_id: int) -> None:
+    from .pipeline import give_up_review, repair_topic_content
 
-    if topic.review_attempts < 2:
-        Topic.objects.filter(id=topic_id).update(
-            content_status=Topic.ContentStatus.NOT_GENERATED,
-            generation_started_at=None,
-        )
-        request_topic_generation(topic_id)
-    else:
-        sentry_sdk.capture_message(
-            f"Topic {topic_id}: all review attempts exhausted",
-            level="error",
-        )
-        _mark_topic_failed(topic_id)
+    try:
+        repair_topic_content(topic_id)
+    except ProviderError:
+        # Review is not re-run: on the last retry, publish the original as UNREVIEWED.
+        if _last_retry(self):
+            give_up_review(topic_id)
+        raise
 
 
 @shared_task(
@@ -217,6 +190,7 @@ def send_notification(self, user_subject_progress_id):
                 Topic.ContentStatus.FAILED,
             ),
         )
+        .exclude(review_status=Topic.ReviewStatus.REJECTED)  # restarts only via the retry endpoint
         .order_by("order")
         .first()
     )
@@ -259,7 +233,7 @@ def send_notification(self, user_subject_progress_id):
 @shared_task(name="learning.cleanup_stuck_generations")
 def cleanup_stuck_generations() -> None:
     from .events import publish_roadmap_status, publish_topic_status
-    from .models import Subject, Topic
+    from .models import Subject
 
     cutoff = timezone.now() - timedelta(hours=1)
 
@@ -277,30 +251,9 @@ def cleanup_stuck_generations() -> None:
         )
         publish_roadmap_status(subject)
 
-    stuck_ids = list(
-        Topic.objects.filter(
-            content_status=Topic.ContentStatus.GENERATING,
-            generation_started_at__lt=cutoff,
-        ).values_list("id", flat=True)
-    )
-    Topic.objects.filter(id__in=stuck_ids).update(
-        content_status=Topic.ContentStatus.NOT_GENERATED,
-        generation_started_at=None,
-    )
+    from .pipeline import sweep_stuck_topics
 
-    failed_ids = list(
-        Topic.objects.filter(
-            content_status=Topic.ContentStatus.FAILED,
-            review_status=Topic.ReviewStatus.FLAGGED,
-            review_attempts=0,
-            generation_started_at__lt=cutoff,
-        ).values_list("id", flat=True)
-    )
-    Topic.objects.filter(id__in=failed_ids).update(
-        content_status=Topic.ContentStatus.NOT_GENERATED,
-        review_status=Topic.ReviewStatus.PENDING,
-        generation_started_at=None,
-    )
+    reset_topic_ids = sweep_stuck_topics(cutoff)
 
     # A quiz the learner is waiting on is not worth an hour: surface FAILED so the page offers a retry.
     from .models import QuizAttempt
@@ -316,7 +269,7 @@ def cleanup_stuck_generations() -> None:
         mark_quiz_failed(attempt_id)
 
     # Tell open pages the topic changed so they refetch (opening it restarts generation).
-    for topic_id in stuck_ids + failed_ids:
+    for topic_id in reset_topic_ids:
         publish_topic_status(topic_id)
 
 

@@ -133,9 +133,9 @@ Reviewer prompt
 
 ## 3.9 Done when
 
-- [ ] Statuses, counter and stored verdict in place; old fields and values gone
-- [ ] Reviewer and repair prompts in the learning prompts module; old review prompt and schema removed from `apps/ai`
-- [ ] Stages and thin tasks; sweeper and retry endpoint updated
-- [ ] All listed tests exist and pass; full suite passes
-- [ ] Docs updated; `PROGRESS.md` entry written
-- [ ] Committed on the branch, not pushed
+- [x] Statuses, counter and stored verdict in place; old fields and values gone
+- [x] Reviewer and repair prompts in the learning prompts module; old review prompt and schema removed from `apps/ai`
+- [x] Stages and thin tasks; sweeper and retry endpoint updated
+- [x] All listed tests exist and pass; full suite passes
+- [x] Docs updated; `PROGRESS.md` entry written
+- [x] Committed on the branch, not pushed

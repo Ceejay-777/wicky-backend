@@ -59,8 +59,8 @@ Make sure `docs/backlog/follow-ups.md` has, briefly:
 
 ## 4.8 Done when
 
-- [ ] Decision table and audit written in `PROGRESS.md`, no open failures
-- [ ] Full suite passes; migration check clean
-- [ ] Docs and frontend handoff written
-- [ ] Final `PROGRESS.md` entry includes a short summary for the owner: what changed, what to look at first in admin, known limits
-- [ ] Committed on the branch, **not pushed, not merged**
+- [x] Decision table and audit written in `PROGRESS.md`, no open failures
+- [x] Full suite passes; migration check clean
+- [x] Docs and frontend handoff written
+- [x] Final `PROGRESS.md` entry includes a short summary for the owner: what changed, what to look at first in admin, known limits
+- [x] Committed on the branch, **not pushed, not merged**

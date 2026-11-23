@@ -42,12 +42,17 @@ python manage.py seed_subjects | seed_demo   # seed data; see docs/reference/liv
 ## AI calls
 
 - Always pass `action=` to `generate_content()`. Each action has its own chain and token ceiling (`_ACTION_CHAINS`, `_MAX_COMPLETION_TOKENS`). Every Groq request sets `max_completion_tokens` and `reasoning_effort`; `finish_reason == "length"` is an error that moves the chain on.
-- Review failures return a flagged result instead of raising.
+- Every action, review included, raises `ProviderError` when its whole chain fails. A malformed or wrongly shaped reply fails that step and the chain moves on.
+- Every AI call needs a `prompt_version` and a JSON-safe `context` (topic id, subject id, quiz attempt id); neither has a default. Public functions return an `AIResult` (`data` plus call metadata and `log_id`).
+- Every chain step is logged to `AIGenerationLog` by the dispatcher; never log AI calls by hand. Attach a caller's verdict with `apps.ai.calllog.annotate_outcome(log_id, ...)`. See `docs/reference/ai-providers.md`, Call log.
+- `apps/ai` never imports from `apps/learning` (a test enforces it).
 - AI calls cost money: never add a path that can call the LLM twice for the same request.
 
 ## Generation flows (do not bypass)
 
 - **Topic content:** start it only through `request_topic_generation(topic_id)` (atomic `NOT_GENERATED -> GENERATING` claim; the task never claims). `GET /topics/<id>` triggers it for the opened topic and the next two; `FAILED` topics restart only via `POST /topics/<id>/retry`.
+- **Prompts:** roadmap, topic, review and repair prompt text, schemas and versions live only in `apps/learning/prompts.py`; any wording change bumps that prompt's version.
+- **Topic pipeline** (`apps/learning/pipeline.py`): three stages, one thin Celery task each: generate, review, repair. Each stage persists its result before queuing the next, and does nothing if the topic is not in its stage's state (redelivery is safe). The review checks only on-topic and quoted factual errors; code drops issues whose quote is not in the summary. Kept issues get one repair (no re-review); off topic regenerates once (`regeneration_count`), then `FAILED`/`REJECTED`. Review or repair outage: Celery retries, then the original is published `UNREVIEWED`. `review_status` is `PENDING`, `PASSED`, `FIXED`, `UNREVIEWED` or `REJECTED`; content is shown only for `PASSED`, `FIXED` and `UNREVIEWED`. See `docs/reference/ai-providers.md`.
 - **Roadmap:** async. `POST /subjects/create` enrolls immediately and queues `generate_roadmap_for_subject`; `POST /subjects/<id>/roadmap/retry` retries.
 - **Status is pushed over SSE, but the DB is the source of truth.** Events are not replayable; clients must also GET.
 - **Topic access:** every topic endpoint goes through `get_accessible_topic` (404 not enrolled, 403 level locked).
@@ -63,6 +68,8 @@ python manage.py seed_subjects | seed_demo   # seed data; see docs/reference/liv
 
 - `CELERY_TASK_ALWAYS_EAGER = True`: tasks run synchronously. Throttling is off. Password hasher is MD5.
 - `MIGRATION_MODULES = {'ai': None}`: the `ai` app has no migrations in tests.
+- `AIGenerationLog` lives on the `ai_log` database alias (a separate in-memory DB in tests). Tests that write or read it need `@pytest.mark.django_db(databases=["default", "ai_log"])`. Mock public AI functions with `apps.ai.tests.helpers.ai_result(data)`.
+- Test settings use plain `StaticFilesStorage`, so admin pages render without `collectstatic`.
 - pgvector queries check `connection.vendor != "postgresql"` first, so they no-op on SQLite.
 - Auth fixtures: `APIClient()` plus `RefreshToken.for_user(user)`; set `client.cookies["access_token"]` by hand.
 

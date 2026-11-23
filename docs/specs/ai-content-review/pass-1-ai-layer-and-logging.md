@@ -119,8 +119,8 @@ Admin
 
 ## 1.8 Done when
 
-- [ ] Branch created, all items above implemented
-- [ ] All listed tests exist and pass; full suite passes
-- [ ] Docs updated
-- [ ] `PROGRESS.md` entry written
-- [ ] Committed on the branch, not pushed
+- [x] Branch created, all items above implemented
+- [x] All listed tests exist and pass; full suite passes
+- [x] Docs updated
+- [x] `PROGRESS.md` entry written
+- [x] Committed on the branch, not pushed

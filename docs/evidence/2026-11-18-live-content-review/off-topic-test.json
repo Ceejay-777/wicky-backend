@@ -1,0 +1,280 @@
+[
+ {
+  "id": 4,
+  "subject": "World War II: Pacific Theater",
+  "title": "Allied Initial Response",
+  "level": 1,
+  "content_status": "READY",
+  "review_status": "FIXED",
+  "regeneration_count": 1,
+  "verdict": {
+   "issues": [
+    {
+     "quote": "The Pacific Fleet referred to the collection of U.S. ships stationed at Pearl Harbor that survived the attack and formed the core of the next operations.",
+     "problem": "It incorrectly defines the Pacific Fleet as only the ships stationed at Pearl Harbor, whereas the fleet also included vessels deployed elsewhere.",
+     "correction": "The Pacific Fleet was the U.S. Navy's main naval force in the Pacific, consisting of ships stationed at Pearl Harbor as well as those deployed elsewhere, many of which survived the attack and formed the core of subsequent operations."
+    },
+    {
+     "quote": "Admiral Husband E. Kimmel was the commander at Pearl Harbor whose removal highlighted the need for new leadership.",
+     "problem": "Kimmel was commander of the Pacific Fleet, not specifically \"commander at Pearl Harbor.\"",
+     "correction": "Admiral Husband E. Kimmel was the commander of the U.S. Pacific Fleet, and his removal after the attack highlighted the need for new leadership."
+    }
+   ],
+   "reason": "The summary describes the Allied Initial Response to Pearl Harbor and stays within the requested scope.",
+   "dropped": 0,
+   "on_topic": true
+  },
+  "summary": "The Allied Initial Response was the quick set of actions taken by the United States and its allies right after the surprise Japanese attack on Pearl Harbor on December 7, 1941. In the days and weeks that followed, the Allies scrambled to assess damage, protect remaining forces, and begin planning a counter‑offensive across the vast Pacific Ocean.\n\nWar Plan Orange was the pre‑war U.S. naval strategy that assumed a conflict with Japan and guided early decisions. The Pacific Fleet was the U.S. Navy's main naval force in the Pacific, consisting of ships stationed at Pearl Harbor as well as those deployed elsewhere, many of which survived the attack and formed the core of subsequent operations. Admiral Husband E. Kimmel was the commander of the U.S. Pacific Fleet, and his removal after the attack highlighted the need for new leadership. Mobilization meant the rapid expansion of troops, shipbuilding, and air power to replace losses. A Task Force is a temporary grouping of ships and aircraft created for a specific mission, such as defending the Philippines or reinforcing Hawaii.\n\nThink of the Allied Initial Response like a city's emergency services rushing to a major fire: first they check who is still safe, then they call in extra fire trucks, set up water supplies, and map out how to stop the blaze from spreading.\n\nThis early response mattered because it set the tempo for the entire Pacific War; without quickly reorganizing the fleet, securing bases, and beginning the island‑hopping strategy, the United States would have been unable to launch the offensive that later led to battles such as Guadalcanal. The decisions made in this period directly shaped the planning and execution of the Guadalcanal Campaign, the next major step in turning the tide against Japan.",
+  "words": 292,
+  "paragraphs": 4,
+  "links": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Pearl_Harbor_attack#Allied_response",
+    "type": "wikipedia",
+    "title": "Allied response to Pearl Harbor"
+   },
+   {
+    "url": "https://www.history.com/topics/world-war-ii/pacific-war",
+    "type": "article",
+    "title": "Pacific War: How the United States Responded to Pearl Harbor"
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=Y2kZ9V3o1G0",
+    "type": "video",
+    "title": "Allied Response to Pearl Harbor - World War II Documentary"
+   }
+  ],
+  "calls": [
+   {
+    "action": "review",
+    "version": "review-v1",
+    "model": "openai/gpt-oss-120b",
+    "step": 0,
+    "served": true,
+    "outcome": "success",
+    "error": "",
+    "latency_ms": 2878,
+    "tokens": 1640,
+    "annotation": {
+     "issues": [],
+     "reason": "The summary discusses Kubernetes autoscaling and not the Allied Initial Response of World War II.",
+     "dropped": 0,
+     "on_topic": false
+    },
+    "parsed": {
+     "issues": [],
+     "reason": "The summary discusses Kubernetes autoscaling and not the Allied Initial Response of World War II.",
+     "on_topic": false
+    }
+   },
+   {
+    "action": "topic",
+    "version": "topic-v1",
+    "model": "openai/gpt-oss-120b",
+    "step": 0,
+    "served": true,
+    "outcome": "success",
+    "error": "",
+    "latency_ms": 4163,
+    "tokens": 2059,
+    "annotation": null,
+    "parsed": {
+     "summary": "The Allied Initial Response was the quick set of actions taken by the United States and its allies right after the surprise Japanese attack on Pearl Harbor on December 7, 1941. In the days and weeks that followed, the Allies scrambled to assess damage, protect remaining forces, and begin planning a counter‑offensive across the vast Pacific Ocean.\n\nWar Plan Orange was the pre‑war U.S. naval strategy that assumed a conflict with Japan and guided early decisions. The Pacific Fleet referred to the collection of U.S. ships stationed at Pearl Harbor that survived the attack and formed the core of the next operations. Admiral Husband E. Kimmel was the commander at Pearl Harbor whose removal highlighted the need for new leadership. Mobilization meant the rapid expansion of troops, shipbuilding, and air power to replace losses. A Task Force is a temporary grouping of ships and aircraft created for a specific mission, such as defending the Philippines or reinforcing Hawaii.\n\nThink of the Allied Initial Response like a city’s emergency services rushing to a major fire: first they check who is still safe, then they call in extra fire trucks, set up water supplies, and map out how to stop the blaze from spreading.\n\nThis early response mattered because it set the tempo for the entire Pacific War; without quickly reorganizing the fleet, securing bases, and beginning the island‑hopping strategy, the United States would have been unable to launch the offensive that later led to battles such as Guadalcanal. The decisions made in this period directly shaped the planning and execution of the Guadalcanal Campaign, the next major step in turning the tide against Japan.",
+     "resource_links": [
+      {
+       "url": "https://en.wikipedia.org/wiki/Pearl_Harbor_attack#Allied_response",
+       "type": "wikipedia",
+       "title": "Allied response to Pearl Harbor"
+      },
+      {
+       "url": "https://www.history.com/topics/world-war-ii/pacific-war",
+       "type": "article",
+       "title": "Pacific War: How the United States Responded to Pearl Harbor"
+      },
+      {
+       "url": "https://www.youtube.com/watch?v=Y2kZ9V3o1G0",
+       "type": "video",
+       "title": "Allied Response to Pearl Harbor - World War II Documentary"
+      }
+     ]
+    }
+   },
+   {
+    "action": "review",
+    "version": "review-v1",
+    "model": "openai/gpt-oss-120b",
+    "step": 0,
+    "served": true,
+    "outcome": "success",
+    "error": "",
+    "latency_ms": 4105,
+    "tokens": 2052,
+    "annotation": {
+     "issues": [
+      {
+       "quote": "The Pacific Fleet referred to the collection of U.S. ships stationed at Pearl Harbor that survived the attack and formed the core of the next operations.",
+       "problem": "It incorrectly defines the Pacific Fleet as only the ships stationed at Pearl Harbor, whereas the fleet also included vessels deployed elsewhere.",
+       "correction": "The Pacific Fleet was the U.S. Navy's main naval force in the Pacific, consisting of ships stationed at Pearl Harbor as well as those deployed elsewhere, many of which survived the attack and formed the core of subsequent operations."
+      },
+      {
+       "quote": "Admiral Husband E. Kimmel was the commander at Pearl Harbor whose removal highlighted the need for new leadership.",
+       "problem": "Kimmel was commander of the Pacific Fleet, not specifically \"commander at Pearl Harbor.\"",
+       "correction": "Admiral Husband E. Kimmel was the commander of the U.S. Pacific Fleet, and his removal after the attack highlighted the need for new leadership."
+      }
+     ],
+     "reason": "The summary describes the Allied Initial Response to Pearl Harbor and stays within the requested scope.",
+     "dropped": 0,
+     "on_topic": true
+    },
+    "parsed": {
+     "issues": [
+      {
+       "quote": "The Pacific Fleet referred to the collection of U.S. ships stationed at Pearl Harbor that survived the attack and formed the core of the next operations.",
+       "problem": "It incorrectly defines the Pacific Fleet as only the ships stationed at Pearl Harbor, whereas the fleet also included vessels deployed elsewhere.",
+       "correction": "The Pacific Fleet was the U.S. Navy's main naval force in the Pacific, consisting of ships stationed at Pearl Harbor as well as those deployed elsewhere, many of which survived the attack and formed the core of subsequent operations."
+      },
+      {
+       "quote": "Admiral Husband E. Kimmel was the commander at Pearl Harbor whose removal highlighted the need for new leadership.",
+       "problem": "Kimmel was commander of the Pacific Fleet, not specifically \"commander at Pearl Harbor.\"",
+       "correction": "Admiral Husband E. Kimmel was the commander of the U.S. Pacific Fleet, and his removal after the attack highlighted the need for new leadership."
+      }
+     ],
+     "reason": "The summary describes the Allied Initial Response to Pearl Harbor and stays within the requested scope.",
+     "on_topic": true
+    }
+   },
+   {
+    "action": "topic_repair",
+    "version": "topic_repair-v1",
+    "model": "openai/gpt-oss-120b",
+    "step": 0,
+    "served": true,
+    "outcome": "success",
+    "error": "",
+    "latency_ms": 4978,
+    "tokens": 2629,
+    "annotation": {
+     "repair": "repaired"
+    },
+    "parsed": {
+     "summary": "The Allied Initial Response was the quick set of actions taken by the United States and its allies right after the surprise Japanese attack on Pearl Harbor on December 7, 1941. In the days and weeks that followed, the Allies scrambled to assess damage, protect remaining forces, and begin planning a counter‑offensive across the vast Pacific Ocean.\n\nWar Plan Orange was the pre‑war U.S. naval strategy that assumed a conflict with Japan and guided early decisions. The Pacific Fleet was the U.S. Navy's main naval force in the Pacific, consisting of ships stationed at Pearl Harbor as well as those deployed elsewhere, many of which survived the attack and formed the core of subsequent operations. Admiral Husband E. Kimmel was the commander of the U.S. Pacific Fleet, and his removal after the attack highlighted the need for new leadership. Mobilization meant the rapid expansion of troops, shipbuilding, and air power to replace losses. A Task Force is a temporary grouping of ships and aircraft created for a specific mission, such as defending the Philippines or reinforcing Hawaii.\n\nThink of the Allied Initial Response like a city's emergency services rushing to a major fire: first they check who is still safe, then they call in extra fire trucks, set up water supplies, and map out how to stop the blaze from spreading.\n\nThis early response mattered because it set the tempo for the entire Pacific War; without quickly reorganizing the fleet, securing bases, and beginning the island‑hopping strategy, the United States would have been unable to launch the offensive that later led to battles such as Guadalcanal. The decisions made in this period directly shaped the planning and execution of the Guadalcanal Campaign, the next major step in turning the tide against Japan."
+    }
+   }
+  ],
+  "events": [
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   },
+   {
+    "event": "topic.status",
+    "subject_id": 47,
+    "topic_id": 4,
+    "content_status": "READY",
+    "review_status": "FIXED"
+   }
+  ],
+  "seconds": 29.2
+ }
+]

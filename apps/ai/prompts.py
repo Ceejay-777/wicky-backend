@@ -8,77 +8,16 @@ Each builder returns a list[dict] ready for chat completions.
 import json
 
 # ---------------------------------------------------------------------------
-# Schemas
+# Prompt versions for the prompts that live here. Bump when the text changes.
 # ---------------------------------------------------------------------------
 
-REVIEW_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "accuracy": {
-            "type": "object",
-            "properties": {
-                "pass": {"type": "boolean"},
-                "note": {"type": "string"},
-            },
-            "required": ["pass", "note"],
-        },
-        "audience_fit": {
-            "type": "object",
-            "properties": {
-                "pass": {"type": "boolean"},
-                "note": {"type": "string"},
-            },
-            "required": ["pass", "note"],
-        },
-        "relevance": {
-            "type": "object",
-            "properties": {
-                "pass": {"type": "boolean"},
-                "note": {"type": "string"},
-            },
-            "required": ["pass", "note"],
-        },
-        "completeness": {
-            "type": "object",
-            "properties": {
-                "pass": {"type": "boolean"},
-                "note": {"type": "string"},
-            },
-            "required": ["pass", "note"],
-        },
-        "overall_passed": {"type": "boolean"},
-    },
-    "required": [
-        "accuracy",
-        "audience_fit",
-        "relevance",
-        "completeness",
-        "overall_passed",
-    ],
-}
+RESOLVE_PROMPT_VERSION = "resolve-v0"
+STANDARDIZE_PROMPT_VERSION = "standardize-v0"
 
-TOPIC_CONTENT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "summary": {"type": "string"},
-        "resource_links": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "url": {"type": "string"},
-                    "type": {
-                        "type": "string",
-                        "enum": ["article", "video", "book", "course", "podcast"],
-                    },
-                },
-                "required": ["title", "url", "type"],
-            },
-        },
-    },
-    "required": ["summary", "resource_links"],
-}
+
+# ---------------------------------------------------------------------------
+# Schemas
+# ---------------------------------------------------------------------------
 
 RESOLVE_SCHEMA = {
     "type": "object",
@@ -124,12 +63,6 @@ STANDARDIZE_NAME_SCHEMA = {
 # System instructions
 # ---------------------------------------------------------------------------
 
-REVIEW_SYSTEM_INSTRUCTION = (
-    "You are a senior editor reviewing educational content for a learning platform. "
-    "Evaluate each axis independently. Be precise -- flag real problems, not stylistic preferences. "
-    "A axis passes unless there is a concrete, identifiable problem."
-)
-
 RANK_RESOLVE_SYSTEM_INSTRUCTION = (
     "You are a curriculum librarian matching a learner's free-text subject input against "
     "an existing catalog. Your job is to decide whether the input refers to a subject already "
@@ -174,34 +107,6 @@ def build_generation_messages(
         
     messages.append({"role": "user", "content": user_content})
     return messages
-
-
-def build_review_messages(
-    content: str,
-    criteria: dict | None = None,
-) -> list[dict]:
-    """Build messages for content review."""
-    context = ""
-    if criteria:
-        context = (
-            f"\n\nContext -- Topic: {criteria.get('topic_title', 'unknown')}, "
-            f"Subject: {criteria.get('subject_name', 'unknown')}"
-        )
-    prompt = (
-        f"Review this educational content for quality and accuracy.{context}\n\n"
-        f"Content:\n{content}\n\n"
-        f"Evaluate each axis independently:\n"
-        f"1. Accuracy -- any claims that are verifiably wrong or hallucinated?\n"
-        f"2. Audience fit -- is the reading level and tone appropriate for general learners?\n"
-        f"3. Relevance -- does the content actually cover the stated topic and subject?\n"
-        f"4. Completeness -- is anything essential missing that would leave a learner confused?\n\n"
-        f"Set overall_passed to true only if ALL four axes pass.\n\n"
-        f"Respond with valid JSON matching this schema: {json.dumps(REVIEW_SCHEMA)}"
-    )
-    return [
-        {"role": "system", "content": REVIEW_SYSTEM_INSTRUCTION},
-        {"role": "user", "content": prompt},
-    ]
 
 
 def build_resolve_messages(

@@ -469,12 +469,14 @@ class TopicDetailView(GenericAPIView):
     def get(self, request, topic_id):
         topic = get_accessible_topic(request.user, topic_id)
         prefetch_topic_content(topic)
+        visible = topic.content_visible
         return Response({
             "data": {
                 "id": topic.id,
                 "title": topic.title,
-                "summary": topic.summary,
-                "resource_links": topic.resource_links,
+                "description": topic.description,
+                "summary": topic.summary if visible else "",
+                "resource_links": topic.resource_links if visible else [],
                 "level": topic.level,
                 "order": topic.order,
                 "content_status": topic.content_status,

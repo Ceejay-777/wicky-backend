@@ -1,13 +1,15 @@
 """
 AI Provider Service Layer
 
-One function per role -- generate, review, embed, rank/resolve -- keeping
+One function per role -- generate, embed, rank/resolve -- keeping
 provider-specific code contained here so swapping providers later is a
 config change, not a rewrite.
 
-Each function accepts clean domain data, delegates to prompts.py for message
-building and providers.py for client creation / response format, then
-validates the parsed JSON shape before returning.
+Every text call goes through ``_call_chain``: it tries the action's chain in
+order, parses and shape-checks each reply, logs every step to
+``AIGenerationLog`` and returns an ``AIResult``. A step that errors, is
+truncated, or returns malformed or wrongly shaped JSON fails and the chain
+moves on; ``ProviderError`` is raised only when every step failed.
 """
 
 import json
@@ -20,15 +22,16 @@ from typing import Any
 import httpx
 import sentry_sdk
 
-from .exceptions import ProviderError
+from .calllog import record_call
+from .exceptions import ProviderError, ResponseShapeError, TruncatedResponseError
+from .models import AIGenerationLog
 from .prompts import (
+    RESOLVE_PROMPT_VERSION,
     RESOLVE_SCHEMA,
-    REVIEW_SCHEMA,
     STANDARDIZE_NAME_SCHEMA,
-    TOPIC_CONTENT_SCHEMA,
+    STANDARDIZE_PROMPT_VERSION,
     build_generation_messages,
     build_resolve_messages,
-    build_review_messages,
     build_standardize_messages,
 )
 from .providers import (
@@ -37,7 +40,6 @@ from .providers import (
     build_groq_response_format,
     call_gemini_native,
     get_client,
-    verify_provider_models,
 )
 
 logger = logging.getLogger(__name__)
@@ -105,26 +107,18 @@ def _is_retryable_error(exc: Exception) -> bool:
 def _validate_shape(data: Any, schema: dict, path: str = "") -> None:
     """Validate parsed JSON matches expected shape.
 
-    Raises GenerationError on mismatch. Covers: missing keys, wrong types,
+    Raises ResponseShapeError on mismatch. Covers: missing keys, wrong types,
     non-object top-level values.
     """
-    from apps.learning.exceptions import GenerationError
-
     if not isinstance(data, dict):
-        raise GenerationError(
-            f"Expected object, got {type(data).__name__}",
-            phase="shape_validation",
-        )
+        raise ResponseShapeError(f"Expected object, got {type(data).__name__}")
 
     required_keys = set(schema.get("required", []))
     for key, prop_schema in schema.get("properties", {}).items():
         full_path = f"{path}.{key}" if path else key
 
         if key in required_keys and key not in data:
-            raise GenerationError(
-                f"Missing required key: {full_path}",
-                phase="shape_validation",
-            )
+            raise ResponseShapeError(f"Missing required key: {full_path}")
 
         if key not in data:
             continue
@@ -133,20 +127,11 @@ def _validate_shape(data: Any, schema: dict, path: str = "") -> None:
         actual = data[key]
 
         if expected_type == "string" and not isinstance(actual, str):
-            raise GenerationError(
-                f"{full_path}: expected string, got {type(actual).__name__}",
-                phase="shape_validation",
-            )
+            raise ResponseShapeError(f"{full_path}: expected string, got {type(actual).__name__}")
         elif expected_type == "boolean" and not isinstance(actual, bool):
-            raise GenerationError(
-                f"{full_path}: expected boolean, got {type(actual).__name__}",
-                phase="shape_validation",
-            )
+            raise ResponseShapeError(f"{full_path}: expected boolean, got {type(actual).__name__}")
         elif expected_type == "array" and not isinstance(actual, list):
-            raise GenerationError(
-                f"{full_path}: expected array, got {type(actual).__name__}",
-                phase="shape_validation",
-            )
+            raise ResponseShapeError(f"{full_path}: expected array, got {type(actual).__name__}")
         elif expected_type == "array" and isinstance(actual, list):
             items_schema = prop_schema.get("items", {})
             if items_schema.get("type") == "object":
@@ -155,10 +140,7 @@ def _validate_shape(data: Any, schema: dict, path: str = "") -> None:
         elif expected_type == "object" and isinstance(actual, dict):
             _validate_shape(actual, prop_schema, full_path)
         elif expected_type == "object" and not isinstance(actual, dict):
-            raise GenerationError(
-                f"{full_path}: expected object, got {type(actual).__name__}",
-                phase="shape_validation",
-            )
+            raise ResponseShapeError(f"{full_path}: expected object, got {type(actual).__name__}")
 
 
 # ---------------------------------------------------------------------------
@@ -189,9 +171,10 @@ _LONG_FORM_CHAIN = [
 _ACTION_CHAINS: dict[str, list[ChainStep]] = {
     "roadmap": _LONG_FORM_CHAIN,
     "topic": _LONG_FORM_CHAIN,
+    "topic_repair": _LONG_FORM_CHAIN,
     "review": [
-        ChainStep("groq", _QWEN, "default"),  # thinking on
         ChainStep("groq", _GPT_OSS_120B, "medium"),
+        ChainStep("groq", _QWEN, "default"),  # thinking on
         ChainStep("groq", _GPT_OSS_20B, "medium"),
     ],
     "quiz_normal": [
@@ -220,12 +203,31 @@ _ACTION_CHAINS: dict[str, list[ChainStep]] = {
 _MAX_COMPLETION_TOKENS: dict[str, int] = {
     "roadmap": 8192,
     "topic": 8192,
+    "topic_repair": 8192,
     "quiz_normal": 8192,
     "quiz_advanced": 8192,
     "review": 4096,
     "standardize": 4096,
     "resolve": 4096,
 }
+
+
+# ---------------------------------------------------------------------------
+# Results
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AIResult:
+    """Parsed reply plus what happened on the call."""
+
+    data: dict[str, Any]
+    provider: str
+    model: str
+    steps_tried: int
+    latency_ms: int
+    # Id of the AIGenerationLog row for the serving step; None if logging failed.
+    log_id: int | None
 
 
 # ---------------------------------------------------------------------------
@@ -240,8 +242,8 @@ def _call_openai_compatible(
     response_format: dict | None = None,
     reasoning_effort: str | None = None,
     max_completion_tokens: int | None = None,
-) -> dict:
-    """Call an OpenAI-compatible provider and return parsed JSON."""
+) -> tuple[str, dict | None]:
+    """Call an OpenAI-compatible provider. Returns (raw reply text, token usage)."""
     client = get_client(config)
     payload: dict[str, Any] = {"model": model, "messages": messages}
     if response_format:
@@ -252,16 +254,15 @@ def _call_openai_compatible(
         payload["max_completion_tokens"] = max_completion_tokens
     resp = client.post("/chat/completions", json=payload)
     resp.raise_for_status()
-    choice = resp.json()["choices"][0]
+    body = resp.json()
+    choice = body["choices"][0]
+    content = choice["message"].get("content") or ""
     if choice.get("finish_reason") == "length":
-        # Cut off at the token ceiling: the JSON is incomplete. Fail this step
-        # so the chain moves on instead of returning a partial document.
-        raise ProviderError(
-            f"{model} response truncated at max_completion_tokens",
-            provider=config.name,
-            recoverable=True,
+        # Cut off at the token ceiling: the JSON is incomplete.
+        raise TruncatedResponseError(
+            f"{model} response truncated at max_completion_tokens", raw=content
         )
-    return json.loads(choice["message"]["content"])
+    return content, body.get("usage")
 
 
 def _call_provider(
@@ -272,10 +273,10 @@ def _call_provider(
     *,
     effort: str | None = None,
     max_tokens: int | None = None,
-) -> dict:
-    """Route to the correct calling mechanism per provider."""
+) -> tuple[str, dict | None]:
+    """Route to the correct calling mechanism per provider. Returns (raw text, usage)."""
     if provider_name == "gemini":
-        return call_gemini_native(messages, schema, model=model)
+        return call_gemini_native(messages, schema, model=model), None
     elif provider_name == "groq":
         config = PROVIDERS["groq"]
         response_format = build_groq_response_format(schema, "Response")
@@ -291,17 +292,54 @@ def _call_provider(
         raise ValueError(f"Unknown provider: {provider_name}")
 
 
-def _call_with_fallback(action: str, messages: list[dict], schema: dict, schema_name: str) -> dict:
-    """Try the action's chain in order. Raises ProviderError when every step fails."""
+def _failure_kind(exc: Exception) -> str:
+    Outcome = AIGenerationLog.Outcome
+    if isinstance(exc, TruncatedResponseError):
+        return Outcome.TRUNCATED
+    if isinstance(exc, json.JSONDecodeError):
+        return Outcome.MALFORMED_JSON
+    if isinstance(exc, ResponseShapeError):
+        return Outcome.SHAPE_INVALID
+    if isinstance(exc, httpx.TimeoutException):
+        return Outcome.TIMEOUT
+    if isinstance(exc, httpx.HTTPError):
+        return Outcome.HTTP_ERROR
+    return Outcome.OTHER
+
+
+def _call_chain(
+    action: str,
+    messages: list[dict],
+    schema: dict,
+    *,
+    prompt_version: str,
+    context: dict,
+) -> AIResult:
+    """Try the action's chain in order, logging every step.
+
+    Raises ProviderError when every step fails.
+    """
     if action not in _ACTION_CHAINS:
         raise ValueError(f"Unknown AI action: {action}")
+    if not isinstance(prompt_version, str) or not prompt_version:
+        raise ValueError("prompt_version is required")
+    if not isinstance(context, dict):
+        raise ValueError("context must be a dict")
     chain = _ACTION_CHAINS[action]
     max_tokens = _MAX_COMPLETION_TOKENS.get(action)
+    log = {
+        "action": action,
+        "prompt_version": prompt_version,
+        "messages": messages,
+        "context": context,
+    }
+    call_started = time.monotonic()
 
-    for step in chain:
+    for position, step in enumerate(chain):
         started = time.monotonic()
+        raw, usage = "", None
         try:
-            result = _call_provider(
+            raw, usage = _call_provider(
                 step.provider,
                 step.model,
                 messages,
@@ -309,20 +347,56 @@ def _call_with_fallback(action: str, messages: list[dict], schema: dict, schema_
                 effort=step.effort,
                 max_tokens=max_tokens,
             )
-            logger.info(
-                "%s served by %s/%s in %.1fs",
-                action, step.provider, step.model, time.monotonic() - started,
-            )
-            return result
+            data = json.loads(raw)
+            _validate_shape(data, schema)
         except Exception as e:
+            latency_ms = int((time.monotonic() - started) * 1000)
+            if isinstance(e, TruncatedResponseError):
+                raw = e.raw
+            record_call(
+                **log,
+                provider=step.provider,
+                model=step.model,
+                step_position=position,
+                outcome=_failure_kind(e),
+                latency_ms=latency_ms,
+                raw_response=raw,
+                usage=usage,
+                error_message=str(e),
+            )
             logger.warning(
-                "%s %s/%s failed after %.1fs: %s",
-                action, step.provider, step.model, time.monotonic() - started, e,
+                "%s %s/%s failed after %dms: %s",
+                action, step.provider, step.model, latency_ms, e,
             )
             sentry_sdk.capture_message(
                 f"{action} {step.provider}/{step.model} failed: {e}",
                 level="warning",
             )
+            continue
+
+        latency_ms = int((time.monotonic() - started) * 1000)
+        log_id = record_call(
+            **log,
+            provider=step.provider,
+            model=step.model,
+            step_position=position,
+            outcome=AIGenerationLog.Outcome.SUCCESS,
+            latency_ms=latency_ms,
+            raw_response=raw,
+            parsed_data=data,
+            usage=usage,
+        )
+        logger.info(
+            "%s served by %s/%s in %dms", action, step.provider, step.model, latency_ms
+        )
+        return AIResult(
+            data=data,
+            provider=step.provider,
+            model=step.model,
+            steps_tried=position + 1,
+            latency_ms=int((time.monotonic() - call_started) * 1000),
+            log_id=log_id,
+        )
 
     raise ProviderError(
         f"All providers failed for {action}",
@@ -338,74 +412,47 @@ def _call_with_fallback(action: str, messages: list[dict], schema: dict, schema_
 
 def generate_content(
     prompt: str,
-    system_instruction: str | None = None,
-    output_schema: dict[str, Any] | None = None,
+    system_instruction: str | None,
+    output_schema: dict[str, Any],
     *,
-    action: str = "topic",
-) -> dict[str, Any]:
-    """Generate educational content for ``action`` (roadmap, topic, quiz_normal,
-    quiz_advanced). Returns validated dict."""
-    schema = output_schema or TOPIC_CONTENT_SCHEMA
-    messages = build_generation_messages(prompt, system_instruction, schema)
-    result = _call_with_fallback(action, messages, schema, "GeneratedContent")
-    _validate_shape(result, schema)
-    return result
+    action: str,
+    prompt_version: str,
+    context: dict,
+) -> AIResult:
+    """Generate content for ``action`` (roadmap, topic, topic_repair, review, quiz_*).
 
-
-def review_content(
-    content: str,
-    criteria: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Review content against quality rubric. Returns validated dict.
-
-    If all review providers fail, or the reply is malformed twice, returns a
-    flagged result so the caller can handle manual review without raising.
+    The caller owns the prompt, so it supplies the schema and the prompt version.
     """
-    from apps.learning.exceptions import GenerationError
-
-    flagged = {
-        k: {"pass": False, "note": "Review unavailable — all providers failed"}
-        for k in ("accuracy", "audience_fit", "relevance", "completeness")
-    }
-    flagged["overall_passed"] = False
-
-    messages = build_review_messages(content, criteria)
-    for attempt in range(2):  # a malformed reply is usually a one-off
-        try:
-            result = _call_with_fallback(
-                "review", messages, REVIEW_SCHEMA, "ReviewResult"
-            )
-        except ProviderError:
-            logger.warning("All review providers failed, flagging for manual review")
-            return flagged
-        try:
-            _validate_shape(result, REVIEW_SCHEMA)
-            return result
-        except GenerationError:
-            logger.warning("Malformed review reply (attempt %d)", attempt + 1)
-    return flagged
+    if not isinstance(output_schema, dict) or not output_schema:
+        raise ValueError("output_schema is required")
+    messages = build_generation_messages(prompt, system_instruction, output_schema)
+    return _call_chain(
+        action, messages, output_schema, prompt_version=prompt_version, context=context
+    )
 
 
 def rank_or_resolve(
     input_text: str,
     candidates: list[dict[str, Any]],
     instruction: str | None = None,
-) -> dict[str, Any]:
-    """Rank candidates or resolve to a subject. Returns validated dict."""
+    *,
+    context: dict,
+) -> AIResult:
+    """Rank candidates or resolve to a subject."""
     messages = build_resolve_messages(input_text, candidates, instruction)
-    result = _call_with_fallback("resolve", messages, RESOLVE_SCHEMA, "ResolveResult")
-    _validate_shape(result, RESOLVE_SCHEMA)
-    return result
-
-
-def standardize_subject_name(raw_input: str) -> dict[str, Any]:
-    """Standardize a raw subject name. Returns validated dict."""
-    messages = build_standardize_messages(raw_input)
-    result = _call_with_fallback(
-        "standardize", messages, STANDARDIZE_NAME_SCHEMA, "StandardizeName"
+    return _call_chain(
+        "resolve", messages, RESOLVE_SCHEMA,
+        prompt_version=RESOLVE_PROMPT_VERSION, context=context,
     )
-    _validate_shape(result, STANDARDIZE_NAME_SCHEMA)
-    return result
+
+
+def standardize_subject_name(raw_input: str, *, context: dict) -> AIResult:
+    """Standardize a raw subject name."""
+    messages = build_standardize_messages(raw_input)
+    return _call_chain(
+        "standardize", messages, STANDARDIZE_NAME_SCHEMA,
+        prompt_version=STANDARDIZE_PROMPT_VERSION, context=context,
+    )
 
 
 def generate_embedding(text: str) -> list[float]:

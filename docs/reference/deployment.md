@@ -17,8 +17,9 @@ Settings: `config.settings.production` in the image; `docker-compose.yml` (web, 
 | Task | Every | Does |
 |---|---|---|
 | `learning.dispatch_notifications` | 15 min | fans out `send_notification` for due subjects |
-| `learning.cleanup_stuck_generations` | 60 min | topics stuck in `GENERATING` > 1h are reset to `NOT_GENERATED`; stuck roadmaps become `FAILED`; quizzes stuck > 15 min become `FAILED` |
+| `learning.cleanup_stuck_generations` | 60 min | topics stuck in `GENERATING` > 1h: in generation are reset to `NOT_GENERATED`, in review or repair are published `UNREVIEWED`; `FAILED` topics with review status `PENDING` are requeued (`REJECTED` never); stuck roadmaps become `FAILED`; quizzes stuck > 15 min become `FAILED` |
 | `learning.auto_select_subjects` | 15 min | enrolls opted-in idle users into a suggestion |
+| `ai.delete_old_generation_logs` | daily | deletes `AIGenerationLog` rows older than `AI_LOG_RETENTION_DAYS`, in batches of 1,000 |
 
 ## Redis
 
@@ -35,6 +36,7 @@ Celery broker, SSE cross-process events (`EVENTSTREAM_REDIS`, derived from `CELE
 | `BREVO_API_KEY`, `DEFAULT_FROM_EMAIL` | email (sender must be verified in Brevo) |
 | `SENTRY_DSN`, `ENVIRONMENT` | optional error tracking |
 | `SECURE_SSL_REDIRECT` | default `True` |
+| `AI_LOG_RETENTION_DAYS` | optional, default `90`: age at which AI call log rows are deleted |
 | `PORT` | web only, set by the host |
 
 All three services get the same variable set.

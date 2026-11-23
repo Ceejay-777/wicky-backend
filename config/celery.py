@@ -32,6 +32,12 @@ def setup_periodic_tasks(sender, **kwargs):
         auto_select_subjects.s(),
         name='auto-select-subjects-every-15-min',
     )
+    from apps.ai.tasks import delete_old_generation_logs
+    sender.add_periodic_task(
+        24 * 60 * 60,
+        delete_old_generation_logs.s(),
+        name='delete-old-ai-generation-logs-daily',
+    )
 
 
 @app.task(bind=True, ignore_result=True)

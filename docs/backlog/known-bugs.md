@@ -8,8 +8,8 @@ Severity: **High** (security / data integrity) · **Medium** · **Low**
 |---|---|---|---|
 | 1 | Medium | Validation | `answers` accepts booleans; `notification-frequency` unchecked |
 | 2 | Medium | Throttle | Authenticated users are not throttled (`user` rate defined, `UserRateThrottle` not enabled) |
-| 3 | Low | AI quality | Reviewer falsely rejects good content ~2 in 8 runs |
 | 4 | Low | Misc | Small issues, list below |
+| 5 | Low | Cost | One quiz request can run the AI chain twice |
 
 ## 1. Input validation
 - `answers: [true, ...]` is accepted as option 1 (`bool` is an `int`).
@@ -19,8 +19,8 @@ Severity: **High** (security / data integrity) · **Medium** · **Low**
 ## 2. No authenticated throttle
 `DEFAULT_THROTTLE_CLASSES` has only `AnonRateThrottle`, so the `'user': '100/hour'` rate is unused. Decide whether quiz generate (it spends AI tokens) needs its own scoped throttle.
 
-## 3. Reviewer false rejections
-Primary reviewer `qwen/qwen3.8-27b` rejected known-good text 2 of 8 runs, both on "completeness". A rejection triggers regeneration (up to 2 attempts, then `FLAGGED`). Consider a softer completeness criterion or requiring two failing axes.
+## 3. Reviewer false rejections (closed 2026-11-17)
+Replaced by the narrow review: only off-topic or quoted, verified factual errors count, and errors are repaired rather than regenerated (`docs/reference/ai-providers.md`, Topic review and repair).
 
 ## 4. Small issues
 - Dead AI-generated links and wrong link `type` labels (see F-1).
@@ -30,3 +30,6 @@ Primary reviewer `qwen/qwen3.8-27b` rejected known-good text 2 of 8 runs, both o
 - `/api/health/` reported `celery: true` with no worker running (2026-10-12, not rechecked).
 - `google.generativeai` is deprecated (FutureWarning); see F-4.
 - Not covered by the 2026-10-12 live run: Brevo emails, Beat dispatch, level-up / subject completion, auto-select, signup / password-reset flows.
+
+## 5. Quiz generation can call the AI twice
+`build_quiz` (`apps/learning/services.py`) retries the AI call inside the task on `ProviderError` as well as on `GenerationError`. When the whole chain fails, the task runs it a second time before raising, and Celery's `autoretry_for` then retries on top. Fix: retry in-task only on `GenerationError` and let `ProviderError` propagate. Left out of the AI content review spec because quizzes were out of scope.

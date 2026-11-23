@@ -1,3 +1,4 @@
+from apps.ai.tests.helpers import ai_result
 from unittest.mock import patch
 
 import pytest
@@ -309,7 +310,7 @@ class TestGenerateQuizView:
     @patch("apps.learning.services.generate_content")
     def test_returns_ready_quiz_without_answers(self, mock_gen, auth_client, subject, enrolled):
         topic = Topic.objects.filter(subject=subject).first()
-        mock_gen.return_value = {"questions": QUESTIONS, "total_points": 100}
+        mock_gen.return_value = ai_result({"questions": QUESTIONS, "total_points": 100})
         resp = auth_client.post(f"/api/learning/topics/{topic.id}/quiz/generate", {}, format="json")
         data = resp.json()["data"]
         assert resp.status_code == status.HTTP_200_OK
@@ -351,7 +352,7 @@ class TestQuizResumeAndReview:
     @patch("apps.learning.services.generate_content")
     def test_generate_new_quiz_is_not_resumed(self, mock_generate, auth_client, user, subject, enrolled):
         topic = self._topic(subject)
-        mock_generate.return_value = {"questions": QUESTIONS, "total_points": 100}
+        mock_generate.return_value = ai_result({"questions": QUESTIONS, "total_points": 100})
         data = auth_client.post(f"/api/learning/topics/{topic.id}/quiz/generate", {}, format="json").json()["data"]
         assert data["resumed"] is False
 
@@ -664,13 +665,13 @@ class TestRetryTopicView:
     def test_failed_topic_is_restarted(self, auth_client, subject, enrolled):
         topic = Topic.objects.filter(subject=subject).first()
         Topic.objects.filter(id=topic.id).update(
-            content_status="FAILED", review_status="FLAGGED", review_attempts=2,
+            content_status="FAILED", review_status="PENDING",
         )
         resp = auth_client.post(self._url(subject))
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["data"] == {"content_status": "GENERATING"}
         topic.refresh_from_db()
-        assert (topic.review_attempts, topic.review_status) == (0, "PENDING")
+        assert topic.review_status == "PENDING"
         self.delay.assert_called_once_with(topic.id)
 
     def test_running_or_ready_topic_is_a_noop(self, auth_client, subject, enrolled):
