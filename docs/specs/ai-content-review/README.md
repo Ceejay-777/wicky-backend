@@ -1,6 +1,6 @@
 # Spec: AI content review and generation quality
 
-Status: implemented on `feat/ai-content-review`, pending merge. Work happens on branch `feat/ai-content-review` in four passes. Each pass runs in its own session.
+Status: implemented; merged into `main` on 2026-11-23. Work happens on branch `feat/ai-content-review` in four passes. Each pass runs in its own session.
 
 Read this file first, then `PROGRESS.md`, then the file for your pass. `AGENTS.md` still applies in full; where this spec is stricter, follow this spec.
 
