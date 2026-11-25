@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 from urllib.parse import urlparse, parse_qsl
 from decouple import config
@@ -195,7 +196,12 @@ SERVICE_BASE_URL = os.environ.get("SERVICE_BASE_URL", "http://localhost:8000")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 # Tokens carry a hash of the password, so changing it revokes all earlier sessions.
-SIMPLE_JWT = {"CHECK_REVOKE_TOKEN": True}
+SIMPLE_JWT = {
+    "CHECK_REVOKE_TOKEN": True,
+    # The auth cookies take their max_age from these, so a cookie never outlives its token.
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
 
 # Server-sent events (django-eventstream). Channels are per-user and only the
 # owner may read them. EVENTSTREAM_REDIS lets Celery workers publish events to

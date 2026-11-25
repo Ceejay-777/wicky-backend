@@ -51,7 +51,7 @@ def _set_auth_cookies(response, user):
         httponly=True,
         secure=not settings.DEBUG,
         samesite='Lax',
-        max_age=900,
+        max_age=int(api_settings.ACCESS_TOKEN_LIFETIME.total_seconds()),
     )
     response.set_cookie(
         key='refresh_token',
@@ -59,7 +59,7 @@ def _set_auth_cookies(response, user):
         httponly=True,
         secure=not settings.DEBUG,
         samesite='Strict',
-        max_age=604800,
+        max_age=int(api_settings.REFRESH_TOKEN_LIFETIME.total_seconds()),
     )
     return access_token_str, refresh_token_str
 
